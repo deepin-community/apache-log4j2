@@ -1,0 +1,2 @@
+version=4
+https://github.com/apache/logging-log4j2/releases .*/log4j-([\d\.]+).tar.gz
