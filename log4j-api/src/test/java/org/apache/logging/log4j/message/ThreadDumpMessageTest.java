@@ -17,15 +17,13 @@
 package org.apache.logging.log4j.message;
 
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.concurrent.locks.ReentrantLock;
 
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
-import static org.junit.Assert.*;
+import static org.junit.jupiter.api.Assertions.*;
 
-/**
- *
- */
 public class ThreadDumpMessageTest {
 
     @Test
@@ -34,9 +32,9 @@ public class ThreadDumpMessageTest {
 
         final String message = msg.getFormattedMessage();
         //System.out.print(message);
-        assertTrue("No header", message.contains("Testing"));
-        assertTrue("No RUNNABLE", message.contains("RUNNABLE"));
-        assertTrue("No ThreadDumpMessage", message.contains("ThreadDumpMessage"));
+        assertTrue(message.contains("Testing"), "No header");
+        assertTrue(message.contains("RUNNABLE"), "No RUNNABLE");
+        assertTrue(message.contains("ThreadDumpMessage"), "No ThreadDumpMessage");
     }
 
 
@@ -60,9 +58,9 @@ public class ThreadDumpMessageTest {
 
         final String message = msg.getFormattedMessage();
         //System.out.print(message);
-        assertTrue("No header", message.contains("Testing"));
-        assertTrue("No RUNNABLE", message.contains("RUNNABLE"));
-        assertTrue("No ThreadDumpMessage", message.contains("ThreadDumpMessage"));
+        assertTrue(message.contains("Testing"), "No header");
+        assertTrue(message.contains("RUNNABLE"), "No RUNNABLE");
+        assertTrue(message.contains("ThreadDumpMessage"), "No ThreadDumpMessage");
         //assertTrue("No Locks", message.contains("waiting on"));
         //assertTrue("No syncronizers", message.contains("locked syncrhonizers"));
     }
@@ -80,17 +78,17 @@ public class ThreadDumpMessageTest {
     public void testUseConstructorThread() throws InterruptedException { // LOG4J2-763
         final ThreadDumpMessage msg = new ThreadDumpMessage("Test");
 
-        final String[] actual = new String[1];
+        final AtomicReference<String> actual = new AtomicReference<>();
         final Thread other = new Thread("OtherThread") {
             @Override
             public void run() {
-                actual[0] = msg.getFormattedMessage();
+                actual.set(msg.getFormattedMessage());
             }
         };
         other.start();
         other.join();
 
-        assertTrue("No mention of other thread in msg", !actual[0].contains("OtherThread"));
+        assertFalse(actual.get().contains("OtherThread"), "No mention of other thread in msg");
     }
 
     @Test
@@ -98,7 +96,7 @@ public class ThreadDumpMessageTest {
 
         final ThreadDumpMessage message = new ThreadDumpMessage("");
         final String initial = message.getFormattedMessage();
-        assertFalse("no ThreadWithCountDownLatch thread yet", initial.contains("ThreadWithCountDownLatch"));
+        assertFalse(initial.contains("ThreadWithCountDownLatch"), "no ThreadWithCountDownLatch thread yet");
 
         final CountDownLatch started = new CountDownLatch(1);
         final CountDownLatch keepAlive = new CountDownLatch(1);
@@ -108,13 +106,13 @@ public class ThreadDumpMessageTest {
 
         final StringBuilder result = new StringBuilder();
         message.formatTo(result);
-        assertFalse("no ThreadWithCountDownLatch captured",
-                result.toString().contains("ThreadWithCountDownLatch"));
+        assertFalse(
+                result.toString().contains("ThreadWithCountDownLatch"), "no ThreadWithCountDownLatch captured");
         assertEquals(initial, result.toString());
         keepAlive.countDown(); // allow thread to die
     }
 
-    private class Thread1 extends Thread {
+    private static class Thread1 extends Thread {
         private final ReentrantLock lock;
 
         public Thread1(final ReentrantLock lock) {
@@ -128,7 +126,7 @@ public class ThreadDumpMessageTest {
         }
     }
 
-    private class Thread2 extends Thread {
+    private static class Thread2 extends Thread {
         private final Object obj;
 
         public Thread2(final Object obj) {
@@ -142,7 +140,7 @@ public class ThreadDumpMessageTest {
         }
     }
 
-    private class ThreadWithCountDownLatch extends Thread {
+    private static class ThreadWithCountDownLatch extends Thread {
         private final CountDownLatch started;
         private final CountDownLatch keepAlive;
         volatile boolean finished;

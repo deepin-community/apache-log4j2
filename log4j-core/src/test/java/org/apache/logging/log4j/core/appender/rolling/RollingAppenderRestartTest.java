@@ -16,59 +16,96 @@
  */
 package org.apache.logging.log4j.core.appender.rolling;
 
-import org.apache.logging.log4j.Logger;
-import org.apache.logging.log4j.junit.LoggerContextRule;
-import org.hamcrest.Matcher;
-import org.junit.BeforeClass;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.RuleChain;
+import static org.apache.logging.log4j.hamcrest.Descriptors.that;
+import static org.apache.logging.log4j.hamcrest.FileMatchers.hasName;
+import static org.hamcrest.Matchers.endsWith;
+import static org.hamcrest.Matchers.hasItemInArray;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
 import java.io.File;
+import java.io.IOException;
 import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.nio.file.StandardOpenOption;
 import java.nio.file.attribute.BasicFileAttributeView;
 import java.nio.file.attribute.FileTime;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
+import java.util.Arrays;
+import java.util.concurrent.TimeUnit;
 
-import static org.apache.logging.log4j.hamcrest.Descriptors.that;
-import static org.apache.logging.log4j.hamcrest.FileMatchers.hasName;
-import static org.hamcrest.Matchers.endsWith;
-import static org.hamcrest.Matchers.hasItemInArray;
-import static org.junit.Assert.assertTrue;
+import org.apache.commons.io.file.PathUtils;
+import org.apache.logging.log4j.Logger;
+import org.apache.logging.log4j.core.appender.RollingFileAppender;
+import org.apache.logging.log4j.junit.LoggerContextRule;
+import org.hamcrest.Matcher;
+import org.junit.AfterClass;
+import org.junit.BeforeClass;
+import org.junit.Rule;
+import org.junit.Test;
+import org.junit.rules.RuleChain;
 
-/**
- *
- */
 public class RollingAppenderRestartTest {
 
     private static final String CONFIG = "log4j-rolling-restart.xml";
-    private static final String DIR = "target/rolling-restart";
 
-    private final LoggerContextRule loggerContextRule = LoggerContextRule.createShutdownTimeoutLoggerContextRule(CONFIG);
+    // Note that both paths are hardcoded in the configuration!
+    private static final Path DIR = Paths.get("target/rolling-restart");
+    private static final Path FILE = DIR.resolve("test.log");
+
+    private final LoggerContextRule loggerContextRule =
+            LoggerContextRule.createShutdownTimeoutLoggerContextRule(CONFIG);
 
     @Rule
-    public RuleChain chain = loggerContextRule.withCleanFoldersRule(false, true, 5, DIR);
+    public RuleChain chain =
+            loggerContextRule.withCleanFoldersRule(
+                    false, true, 5, DIR.toAbsolutePath().toString());
 
     @BeforeClass
     public static void setup() throws Exception {
-        File file = new File("target/rolling-restart/test.log");
-        Files.createDirectories(file.toPath().getParent());
-        Files.write(file.toPath(), "Hello, world".getBytes(), StandardOpenOption.CREATE);
+        tearDown();
+        Files.createDirectories(DIR);
+        Files.write(FILE, "Hello, world".getBytes(), StandardOpenOption.CREATE);
         FileTime newTime = FileTime.from(Instant.now().minus(2, ChronoUnit.DAYS));
-        Files.getFileAttributeView(file.toPath(), BasicFileAttributeView.class).setTimes(newTime, newTime, newTime);
+        Files
+                .getFileAttributeView(FILE, BasicFileAttributeView.class)
+                .setTimes(newTime, newTime, newTime);
+    }
+
+    @AfterClass
+    public static void tearDown() throws IOException {
+        if (Files.exists(DIR)) {
+            PathUtils.deleteDirectory(DIR);
+        }
     }
 
     @Test
     public void testAppender() throws Exception {
         final Logger logger = loggerContextRule.getLogger();
         logger.info("This is test message number 1");
-
-        final File dir = new File(DIR);
-
-        final Matcher<File[]> hasGzippedFile = hasItemInArray(that(hasName(that(endsWith(".gz")))));
-        final File[] files = dir.listFiles();
-        assertTrue("No gzipped files found", hasGzippedFile.matches(files));
+        // The GZ compression takes place asynchronously.
+        // Make sure it's done before validating.
+        Thread.yield();
+        final String name = "RollingFile";
+        RollingFileAppender appender = loggerContextRule.getAppender(name);
+        assertNotNull(appender, name);
+        if (appender.getManager().getSemaphore().tryAcquire(5, TimeUnit.SECONDS)) {
+            // If we are in here, either the rollover is done or has not taken place yet.
+            validate();            
+        } else {
+            fail("Rolling over is taking too long.");
+        }
     }
+
+    private void validate() {
+        final Matcher<File[]> hasGzippedFile = hasItemInArray(that(hasName(that(endsWith(".gz")))));
+        final File[] files = DIR.toFile().listFiles();
+        Arrays.sort(files);
+        assertTrue(hasGzippedFile.matches(files),
+                () -> "was expecting files with '.gz' suffix, found: " + Arrays.toString(files));
+    }
+
 }

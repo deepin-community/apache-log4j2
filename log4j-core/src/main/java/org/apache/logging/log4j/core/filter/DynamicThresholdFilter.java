@@ -32,11 +32,13 @@ import org.apache.logging.log4j.core.config.plugins.PluginAttribute;
 import org.apache.logging.log4j.core.config.plugins.PluginElement;
 import org.apache.logging.log4j.core.config.plugins.PluginFactory;
 import org.apache.logging.log4j.core.ContextDataInjector;
+import org.apache.logging.log4j.core.impl.ContextDataFactory;
 import org.apache.logging.log4j.core.impl.ContextDataInjectorFactory;
 import org.apache.logging.log4j.core.util.KeyValuePair;
 import org.apache.logging.log4j.message.Message;
 import org.apache.logging.log4j.util.PerformanceSensitive;
 import org.apache.logging.log4j.util.ReadOnlyStringMap;
+import org.apache.logging.log4j.util.StringMap;
 
 /**
  * Compares against a log level that is associated with a context value. By default the context is the
@@ -80,6 +82,11 @@ public final class DynamicThresholdFilter extends AbstractFilter {
     private DynamicThresholdFilter(final String key, final Map<String, Level> pairs, final Level defaultLevel,
                                    final Result onMatch, final Result onMismatch) {
         super(onMatch, onMismatch);
+        // ContextDataFactory looks up a property. The Spring PropertySource may log which will cause recursion.
+        // By initializing the ContextDataFactory here recursion will be prevented.
+        StringMap map = ContextDataFactory.createContextData();
+        LOGGER.debug("Successfully initialized ContextDataFactory by retrieving the context data with {} entries",
+                map.size());
         Objects.requireNonNull(key, "key cannot be null");
         this.key = key;
         this.levelMap = pairs;
@@ -98,25 +105,13 @@ public final class DynamicThresholdFilter extends AbstractFilter {
             return false;
         }
         final DynamicThresholdFilter other = (DynamicThresholdFilter) obj;
-        if (defaultThreshold == null) {
-            if (other.defaultThreshold != null) {
-                return false;
-            }
-        } else if (!defaultThreshold.equals(other.defaultThreshold)) {
+        if (!Objects.equals(defaultThreshold, other.defaultThreshold)) {
             return false;
         }
-        if (key == null) {
-            if (other.key != null) {
-                return false;
-            }
-        } else if (!key.equals(other.key)) {
+        if (!Objects.equals(key, other.key)) {
             return false;
         }
-        if (levelMap == null) {
-            if (other.levelMap != null) {
-                return false;
-            }
-        } else if (!levelMap.equals(other.levelMap)) {
+        if (!Objects.equals(levelMap, other.levelMap)) {
             return false;
         }
         return true;

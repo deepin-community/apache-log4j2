@@ -16,12 +16,6 @@
  */
 package org.apache.logging.log4j.core.filter;
 
-import static org.hamcrest.CoreMatchers.equalTo;
-import static org.hamcrest.MatcherAssert.assertThat;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertSame;
-import static org.junit.Assert.assertTrue;
-
 import org.apache.logging.log4j.Level;
 import org.apache.logging.log4j.core.Filter;
 import org.apache.logging.log4j.core.Filter.Result;
@@ -30,14 +24,15 @@ import org.apache.logging.log4j.core.impl.Log4jLogEvent;
 import org.apache.logging.log4j.message.Message;
 import org.apache.logging.log4j.message.SimpleMessage;
 import org.apache.logging.log4j.status.StatusLogger;
-import org.junit.BeforeClass;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
 
-/**
- *
- */
+import static org.hamcrest.CoreMatchers.equalTo;
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.junit.jupiter.api.Assertions.*;
+
 public class RegexFilterTest {
-    @BeforeClass
+    @BeforeAll
     public static void before() {
         StatusLogger.getLogger().setLevel(Level.OFF);
     }
@@ -85,5 +80,25 @@ public class RegexFilterTest {
         assertSame(Filter.Result.DENY, filter.filter(null, Level.DEBUG, null, (Object) null, (Throwable) null));
         assertSame(Filter.Result.DENY, filter.filter(null, Level.DEBUG, null, (Message) null, (Throwable) null));
         assertSame(Filter.Result.DENY, filter.filter(null, Level.DEBUG, null, null, (Object[]) null));
+    }
+
+    @Test
+    public void testParameterizedMsg() throws Exception {
+        final String msg = "params {} {}";
+        final Object[] params = { "foo", "bar" };
+
+        // match against raw message
+        final RegexFilter rawFilter = RegexFilter.createFilter("params \\{\\} \\{\\}", null,
+                                                               true, // useRawMsg
+                                                               Result.ACCEPT, Result.DENY);
+        final Result rawResult = rawFilter.filter(null, null, null, msg, params);
+        assertThat(rawResult, equalTo(Result.ACCEPT));
+
+        // match against formatted message
+        final RegexFilter fmtFilter = RegexFilter.createFilter("params foo bar", null,
+                                                               false, // useRawMsg
+                                                               Result.ACCEPT, Result.DENY);
+        final Result fmtResult = fmtFilter.filter(null, null, null, msg, params);
+        assertThat(fmtResult, equalTo(Result.ACCEPT));
     }
 }

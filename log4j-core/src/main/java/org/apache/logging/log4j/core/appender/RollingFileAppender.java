@@ -102,27 +102,16 @@ public final class RollingFileAppender extends AbstractOutputStreamAppender<Roll
 
         @Override
         public RollingFileAppender build() {
+            if (!isValid()) {
+                return null;
+            }
             // Even though some variables may be annotated with @Required, we must still perform validation here for
             // call sites that build builders programmatically.
             final boolean isBufferedIo = isBufferedIo();
             final int bufferSize = getBufferSize();
-            if (getName() == null) {
-                LOGGER.error("RollingFileAppender '{}': No name provided.", getName());
-                return null;
-            }
 
             if (!isBufferedIo && bufferSize > 0) {
                 LOGGER.warn("RollingFileAppender '{}': The bufferSize is set to {} but bufferedIO is not true", getName(), bufferSize);
-            }
-
-            if (filePattern == null) {
-                LOGGER.error("RollingFileAppender '{}': No file name pattern provided.", getName());
-                return null;
-            }
-
-            if (policy == null) {
-                LOGGER.error("RollingFileAppender '{}': No TriggeringPolicy provided.", getName());
-                return null;
             }
 
             if (strategy == null) {
@@ -138,7 +127,7 @@ public final class RollingFileAppender extends AbstractOutputStreamAppender<Roll
                                         .build();
                 }
             } else if (fileName == null && !(strategy instanceof DirectFileRolloverStrategy)) {
-                LOGGER.error("RollingFileAppender '{}': When no file name is provided a DirectFilenameRolloverStrategy must be configured", getName());
+                LOGGER.error("RollingFileAppender '{}': When no file name is provided a {} must be configured", getName(), DirectFileRolloverStrategy.class.getSimpleName());
                 return null;
             }
 
@@ -153,8 +142,8 @@ public final class RollingFileAppender extends AbstractOutputStreamAppender<Roll
             manager.initialize();
 
             return new RollingFileAppender(getName(), layout, getFilter(), manager, fileName, filePattern,
-                    isIgnoreExceptions(), isImmediateFlush(), advertise ? getConfiguration().getAdvertiser() : null,
-                    getPropertyArray());
+                    isIgnoreExceptions(), !isBufferedIo || isImmediateFlush(),
+                    advertise ? getConfiguration().getAdvertiser() : null, getPropertyArray());
         }
 
         public String getAdvertiseUri() {

@@ -18,6 +18,7 @@ package org.apache.logging.log4j.core.appender;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Objects;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
@@ -26,7 +27,9 @@ import org.apache.logging.log4j.Level;
 import org.apache.logging.log4j.Logger;
 import org.apache.logging.log4j.core.AbstractLifeCycle;
 import org.apache.logging.log4j.core.LoggerContext;
+import org.apache.logging.log4j.core.config.Configuration;
 import org.apache.logging.log4j.core.config.ConfigurationException;
+import org.apache.logging.log4j.core.lookup.StrSubstitutor;
 import org.apache.logging.log4j.message.Message;
 import org.apache.logging.log4j.status.StatusLogger;
 
@@ -36,10 +39,38 @@ import org.apache.logging.log4j.status.StatusLogger;
  * This class implements {@link AutoCloseable} mostly to allow unit tests to be written safely and succinctly. While
  * managers do need to allocate resources (usually on construction) and then free these resources, a manager is longer
  * lived than other auto-closeable objects like streams. None the less, making a manager AutoCloseable forces readers to
- * be aware of the the pattern: allocate resources on construction and call {@link #close()} at some point.
+ * be aware of the pattern: allocate resources on construction and call {@link #close()} at some point.
  * </p>
  */
 public abstract class AbstractManager implements AutoCloseable {
+
+    /**
+     * Implementations should extend this class for passing data between the getManager method and the manager factory
+     * class.
+     */
+    protected abstract static class AbstractFactoryData {
+
+        private final Configuration configuration;
+
+        /**
+         * Constructs the base factory data.
+         *
+         * @param configuration Configuration creating this instance.
+         */
+        protected AbstractFactoryData(final Configuration configuration) {
+            this.configuration = configuration;
+        }
+
+        /**
+         * Gets my configuration.
+         *
+         * @return my configuration.
+         */
+        public Configuration getConfiguration() {
+            return configuration;
+        }
+
+    }
 
     /**
      * Allow subclasses access to the status logger without creating another instance.
@@ -110,7 +141,7 @@ public abstract class AbstractManager implements AutoCloseable {
             @SuppressWarnings("unchecked")
             M manager = (M) MAP.get(name);
             if (manager == null) {
-                manager = factory.createManager(name, data);
+                manager = Objects.requireNonNull(factory, "factory").createManager(name, data);
                 if (manager == null) {
                     throw new IllegalStateException("ManagerFactory [" + factory + "] unable to create manager for ["
                             + name + "] with data [" + data + "]");
@@ -174,6 +205,13 @@ public abstract class AbstractManager implements AutoCloseable {
     }
 
     /**
+     * For testing purposes.
+     */
+    static int getManagerCount() {
+        return MAP.size();
+    }
+
+    /**
      * May be overridden by managers to perform processing while the manager is being released and the
      * lock is held. A timeout is passed for implementors to use as they see fit.
      * @param timeout timeout
@@ -226,6 +264,22 @@ public abstract class AbstractManager implements AutoCloseable {
      */
     public Map<String, String> getContentFormat() {
         return new HashMap<>();
+    }
+
+    /**
+     * Gets my configuration's StrSubstitutor or null.
+     *
+     * @return my configuration's StrSubstitutor or null.
+     */
+    protected StrSubstitutor getStrSubstitutor() {
+        if (loggerContext == null) {
+            return null;
+        }
+        final Configuration configuration = loggerContext.getConfiguration();
+        if (configuration == null) {
+            return null;
+        }
+        return configuration.getStrSubstitutor();
     }
 
     protected void log(final Level level, final String message, final Throwable throwable) {

@@ -35,7 +35,7 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 /**
- *
+ * Lookups up keys for a Docker container.
  */
 @Plugin(name = "docker", category = StrLookup.CATEGORY)
 public class DockerLookup extends AbstractLookup {
@@ -45,6 +45,9 @@ public class DockerLookup extends AbstractLookup {
     private static final String HTTP = "http";
     private final Container container;
 
+    /**
+     * Constructs a new instance.
+     */
     public DockerLookup() {
         String baseUri = System.getenv(DOCKER_URI);
         if (baseUri == null) {
@@ -53,14 +56,14 @@ public class DockerLookup extends AbstractLookup {
         }
         if (baseUri == null) {
             LOGGER.warn("No Docker URI provided. Docker information is unavailable");
+            container = null;
+            return;
         }
         Container current = null;
         try {
             URL url= new URL(baseUri + "/containers/json");
-            String hostName = NetUtils.getLocalHostname();
-            String macAddr = NetUtils.getMacAddressString();
-
             if (url.getProtocol().equals(HTTP)) {
+                String macAddr = NetUtils.getMacAddressString();
                 ObjectMapper objectMapper = new ObjectMapper();
                 List<Container> containerList = objectMapper.readValue(url, new TypeReference<List<Container>>(){});
 

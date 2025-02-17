@@ -50,7 +50,7 @@ public class FlumeAvroManager extends AbstractFlumeManager {
 
     private final int current = 0;
 
-    private volatile RpcClient rpcClient = null;
+    private volatile RpcClient rpcClient;
 
     private BatchEvent batchEvent = new BatchEvent();
     private long nextSend = 0;
@@ -97,7 +97,7 @@ public class FlumeAvroManager extends AbstractFlumeManager {
 
         if (batchSize <= 0) {
             batchSize = 1;
-        };
+        }
         final StringBuilder sb = new StringBuilder(name);
         sb.append(" FlumeAvro[");
         boolean first = true;

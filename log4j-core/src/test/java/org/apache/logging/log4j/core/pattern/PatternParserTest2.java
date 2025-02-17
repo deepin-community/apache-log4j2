@@ -21,13 +21,10 @@ import java.util.Calendar;
 import java.util.Date;
 import java.util.List;
 
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
-import static org.junit.Assert.*;
+import static org.junit.jupiter.api.Assertions.*;
 
-/**
- *
- */
 public class PatternParserTest2 {
 
     @Test
@@ -65,8 +62,7 @@ public class PatternParserTest2 {
         final List<PatternConverter> converters = new ArrayList<>();
         final List<FormattingInfo> fields = new ArrayList<>();
         parser0.parse(pattern, converters, fields, false, false, convert);
-        final FormattingInfo[] infoArray = new FormattingInfo[fields.size()];
-        final FormattingInfo[] patternFields = fields.toArray(infoArray);
+        final FormattingInfo[] patternFields = fields.toArray(FormattingInfo.EMPTY_ARRAY);
         final ArrayPatternConverter[] converterArray = new ArrayPatternConverter[converters.size()];
         final ArrayPatternConverter[] patternConverters = converters.toArray(converterArray);
         formatFileName(patternConverters, patternFields, buf, date, i);

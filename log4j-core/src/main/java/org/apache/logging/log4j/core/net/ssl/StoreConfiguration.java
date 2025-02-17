@@ -25,6 +25,9 @@ import org.apache.logging.log4j.status.StatusLogger;
  *
  */
 public class StoreConfiguration<T> {
+
+    static final String PKCS12 = "PKCS12";
+    static final String JKS = "JKS";
     protected static final StatusLogger LOGGER = StatusLogger.getLogger();
 
     private String location;
@@ -121,11 +124,7 @@ public class StoreConfiguration<T> {
             return false;
         }
         final StoreConfiguration<?> other = (StoreConfiguration<?>) obj;
-        if (location == null) {
-            if (other.location != null) {
-                return false;
-            }
-        } else if (!location.equals(other.location)) {
+        if (!Objects.equals(location, other.location)) {
             return false;
         }
         if (!Arrays.equals(passwordProvider.getPassword(), other.passwordProvider.getPassword())) {

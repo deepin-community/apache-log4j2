@@ -47,7 +47,6 @@ public class LogManager extends java.util.logging.LogManager {
     private final ThreadLocal<Set<String>> recursive = ThreadLocal.withInitial(HashSet::new);
 
     public LogManager() {
-        super();
         AbstractLoggerAdapter adapter = null;
         final String overrideAdaptorClassName =
             PropertiesUtil.getProperties().getStringProperty(Constants.LOGGER_ADAPTOR_PROPERTY);
@@ -97,10 +96,9 @@ public class LogManager extends java.util.logging.LogManager {
             } finally {
                 activeRequests.remove(name);
             }
-        } else {
-            LOGGER.warn("Recursive call to getLogger for {} ignored.", name);
-            return new NoOpLogger(name);
         }
+        LOGGER.warn("Recursive call to getLogger for {} ignored.", name);
+        return new NoOpLogger(name);
     }
 
     @Override

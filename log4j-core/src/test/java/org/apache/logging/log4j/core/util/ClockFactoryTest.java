@@ -16,16 +16,20 @@
  */
 package org.apache.logging.log4j.core.util;
 
-import java.lang.reflect.Field;
-
 import org.apache.commons.lang3.reflect.FieldUtils;
 import org.apache.logging.log4j.core.async.AsyncLogger;
 import org.apache.logging.log4j.core.impl.Log4jLogEvent;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.condition.EnabledOnJre;
+import org.junit.jupiter.api.condition.JRE;
 
-import static org.junit.Assert.*;
+import java.lang.reflect.Field;
 
+import static org.junit.jupiter.api.Assertions.*;
+
+// as of Java 12, final fields can no longer be overwritten via reflection
+@EnabledOnJre({ JRE.JAVA_8, JRE.JAVA_9, JRE.JAVA_10, JRE.JAVA_11 })
 public class ClockFactoryTest {
 
     public static void resetClocks() throws IllegalAccessException {
@@ -36,11 +40,11 @@ public class ClockFactoryTest {
     public static void resetClock(final Class<?> clazz) throws IllegalAccessException {
         System.clearProperty(ClockFactory.PROPERTY_NAME);
         final Field field = FieldUtils.getField(clazz, "CLOCK", true);
-        FieldUtils.removeFinalModifier(field, true);
+        FieldUtils.removeFinalModifier(field);
         FieldUtils.writeStaticField(field, ClockFactory.getClock(), false);
     }
 
-    @Before
+    @BeforeEach
     public void setUp() throws Exception {
         resetClocks();
     }

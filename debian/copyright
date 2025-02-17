@@ -1,4 +1,4 @@
-Format: http://www.debian.org/doc/packaging-manuals/copyright-format/1.0/
+Format: https://www.debian.org/doc/packaging-manuals/copyright-format/1.0/
 Upstream-Name: Apache Log4j 2
 Source: http://logging.apache.org/log4j/2.x/
 Files-Excluded: src/site
@@ -7,12 +7,12 @@ Files-Excluded: src/site
                 mvnw*
 
 Files: *
-Copyright: 1999-2016, The Apache Software Foundation
+Copyright: 1999-2022, The Apache Software Foundation
 License: Apache-2.0
 
 Files: debian/*
 Copyright: 2014-2016, Emmanuel Bourg <ebourg@apache.org>
-           2015-2016, Markus Koschany <apo@gambaru.de>
+           2015-2022, Markus Koschany <apo@gambaru.de>
 License: Apache-2.0
 
 License: Apache-2.0

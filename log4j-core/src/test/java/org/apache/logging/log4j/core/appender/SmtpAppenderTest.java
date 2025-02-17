@@ -16,7 +16,15 @@
  */
 package org.apache.logging.log4j.core.appender;
 
+import static org.junit.Assert.assertArrayEquals;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertTrue;
+
 import java.util.Iterator;
+
 import javax.mail.Address;
 import javax.mail.Message;
 import javax.mail.MessagingException;
@@ -30,11 +38,10 @@ import org.apache.logging.log4j.categories.Appenders;
 import org.apache.logging.log4j.core.Logger;
 import org.apache.logging.log4j.core.LoggerContext;
 import org.apache.logging.log4j.core.net.MimeMessageBuilder;
+import org.apache.logging.log4j.core.net.SmtpManager;
 import org.apache.logging.log4j.test.AvailablePortFinder;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
-
-import static org.junit.Assert.*;
 
 @Category(Appenders.Smtp.class)
 public class SmtpAppenderTest {
@@ -120,11 +127,13 @@ public class SmtpAppenderTest {
                 .setBcc("bcc@example.com")
                 .setFrom("from@example.com")
                 .setReplyTo("replyTo@example.com")
-                .setSubject("Subject Pattern %X{" + subjectKey + "}")
+                .setSubject("Subject Pattern %X{" + subjectKey + "} %maxLen{%m}{10}")
                 .setSmtpHost(HOST)
                 .setSmtpPort(smtpPort)
                 .setBufferSize(3)
                 .build();
+        assertNotNull(appender);
+        assertTrue(appender.getManager() instanceof SmtpManager);
         appender.start();
 
         final LoggerContext context = LoggerContext.getContext();
@@ -153,8 +162,7 @@ public class SmtpAppenderTest {
         // can't be tested with Dumpster 1.6
         assertEquals("from@example.com", email.getHeaderValue("From"));
         assertEquals("replyTo@example.com", email.getHeaderValue("Reply-To"));
-        final String headerValue = email.getHeaderValue("Subject");
-        assertEquals(headerValue, "Subject Pattern " + subjectValue);
+        assertEquals("Subject Pattern " + subjectValue +" Error with", email.getHeaderValue("Subject"));
 
         final String body = email.getBody();
         assertFalse(body.contains("Debug message #1"));
@@ -167,9 +175,14 @@ public class SmtpAppenderTest {
         assertFalse(body.contains("Error message #2"));
 
         final SmtpMessage email2 = messages.next();
+
+        assertEquals("Subject Pattern " + subjectValue +" Error mess", email2.getHeaderValue("Subject"));
+
         final String body2 = email2.getBody();
         assertFalse(body2.contains("Debug message #4"));
         assertFalse(body2.contains("Error with exception"));
         assertTrue(body2.contains("Error message #2"));
     }
+
+    
 }

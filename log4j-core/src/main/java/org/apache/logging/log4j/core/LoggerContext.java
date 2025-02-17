@@ -22,9 +22,7 @@ import java.beans.PropertyChangeEvent;
 import java.beans.PropertyChangeListener;
 import java.io.File;
 import java.net.URI;
-import java.util.ArrayList;
 import java.util.Collection;
-import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
 import java.util.concurrent.ConcurrentHashMap;
@@ -46,7 +44,6 @@ import org.apache.logging.log4j.core.impl.Log4jLogEvent;
 import org.apache.logging.log4j.core.jmx.Server;
 import org.apache.logging.log4j.core.util.Cancellable;
 import org.apache.logging.log4j.core.util.ExecutorServices;
-import org.apache.logging.log4j.core.util.Loader;
 import org.apache.logging.log4j.core.util.NetUtils;
 import org.apache.logging.log4j.core.util.ShutdownCallbackRegistry;
 import org.apache.logging.log4j.message.MessageFactory;
@@ -69,15 +66,6 @@ public class LoggerContext extends AbstractLifeCycle
         implements org.apache.logging.log4j.spi.LoggerContext, AutoCloseable, Terminable, ConfigurationListener,
         LoggerContextShutdownEnabled {
 
-    static {
-        try {
-            // LOG4J2-1642 preload ExecutorServices as it is used in shutdown hook
-            Loader.loadClass(ExecutorServices.class.getName());
-        } catch (final Exception e) {
-            LOGGER.error("Failed to preload ExecutorServices class.", e);
-        }
-    }
-
     /**
      * Property name of the property change event fired if the configuration is changed.
      */
@@ -87,7 +75,7 @@ public class LoggerContext extends AbstractLifeCycle
 
     private final LoggerRegistry<Logger> loggerRegistry = new LoggerRegistry<>();
     private final CopyOnWriteArrayList<PropertyChangeListener> propertyChangeListeners = new CopyOnWriteArrayList<>();
-    private volatile List<LoggerContextShutdownAware> listeners = null;
+    private volatile List<LoggerContextShutdownAware> listeners;
 
     /**
      * The Configuration is volatile to guarantee that initialization of the Configuration has completed before the
@@ -166,17 +154,19 @@ public class LoggerContext extends AbstractLifeCycle
         }
     }
 
+    @Override
     public void addShutdownListener(LoggerContextShutdownAware listener) {
         if (listeners == null) {
             synchronized(this) {
                 if (listeners == null) {
-                    listeners = Collections.synchronizedList(new ArrayList<LoggerContextShutdownAware>());
+                    listeners = new CopyOnWriteArrayList<LoggerContextShutdownAware>();
                 }
             }
         }
         listeners.add(listener);
     }
 
+    @Override
     public List<LoggerContextShutdownAware> getListeners() {
         return listeners;
     }
@@ -301,6 +291,8 @@ public class LoggerContext extends AbstractLifeCycle
             final LoggerContextFactory factory = LogManager.getFactory();
             if (factory instanceof ShutdownCallbackRegistry) {
                 LOGGER.debug(SHUTDOWN_HOOK_MARKER, "Shutdown hook enabled. Registering a new one.");
+                // LOG4J2-1642 preload ExecutorServices as it is used in shutdown hook
+                ExecutorServices.ensureInitialized();
                 try {
                     final long shutdownTimeoutMillis = this.configuration.getShutdownTimeoutMillis();
                     this.shutdownCallback = ((ShutdownCallbackRegistry) factory).addShutdownCallback(new Runnable() {
@@ -528,6 +520,16 @@ public class LoggerContext extends AbstractLifeCycle
     }
 
     /**
+     * Gets the LoggerRegistry.
+     *
+     * @return the LoggerRegistry.
+     * @since 2.17.2
+     */
+    public LoggerRegistry<Logger> getLoggerRegistry() {
+        return loggerRegistry;
+    }
+
+    /**
      * Determines if the specified Logger exists.
      *
      * @param name The Logger name to search for.
@@ -609,7 +611,8 @@ public class LoggerContext extends AbstractLifeCycle
             final ConcurrentMap<String, String> map = config.getComponent(Configuration.CONTEXT_PROPERTIES);
 
             try { // LOG4J2-719 network access may throw android.os.NetworkOnMainThreadException
-                map.putIfAbsent("hostName", NetUtils.getLocalHostname());
+                // LOG4J2-2808 don't block unless necessary
+                map.computeIfAbsent("hostName", s -> NetUtils.getLocalHostname());
             } catch (final Exception ex) {
                 LOGGER.debug("Ignoring {}, setting hostName to 'unknown'", ex.toString());
                 map.putIfAbsent("hostName", "unknown");
@@ -768,5 +771,4 @@ public class LoggerContext extends AbstractLifeCycle
     protected Logger newInstance(final LoggerContext ctx, final String name, final MessageFactory messageFactory) {
         return new Logger(ctx, name, messageFactory);
     }
-
 }

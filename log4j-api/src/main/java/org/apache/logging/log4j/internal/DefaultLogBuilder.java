@@ -16,8 +16,7 @@
  */
 package org.apache.logging.log4j.internal;
 
-import java.io.Serializable;
-
+import org.apache.logging.log4j.BridgeAware;
 import org.apache.logging.log4j.Level;
 import org.apache.logging.log4j.LogBuilder;
 import org.apache.logging.log4j.Logger;
@@ -33,7 +32,7 @@ import org.apache.logging.log4j.util.Supplier;
 /**
  * Collects data for a log event and then logs it. This class should be considered private.
  */
-public class DefaultLogBuilder implements LogBuilder {
+public class DefaultLogBuilder implements BridgeAware, LogBuilder {
 
     private static Message EMPTY_MESSAGE = new SimpleMessage("");
     private static final String FQCN = DefaultLogBuilder.class.getName();
@@ -46,6 +45,7 @@ public class DefaultLogBuilder implements LogBuilder {
     private StackTraceElement location;
     private volatile boolean inUse;
     private long threadId;
+    private String fqcn = FQCN;
 
     public DefaultLogBuilder(Logger logger, Level level) {
         this.logger = logger;
@@ -58,6 +58,11 @@ public class DefaultLogBuilder implements LogBuilder {
         this.logger = logger;
         this.inUse = false;
         this.threadId = Thread.currentThread().getId();
+    }
+
+    @Override
+    public void setEntryPoint(String fqcn) {
+        this.fqcn = fqcn;
     }
 
     /**
@@ -74,21 +79,25 @@ public class DefaultLogBuilder implements LogBuilder {
         return this;
     }
 
+    @Override
     public LogBuilder withMarker(Marker marker) {
         this.marker = marker;
         return this;
     }
 
+    @Override
     public LogBuilder withThrowable(Throwable throwable) {
         this.throwable = throwable;
         return this;
     }
 
+    @Override
     public LogBuilder withLocation() {
         location = StackLocatorUtil.getStackTraceElement(2);
         return this;
     }
 
+    @Override
     public LogBuilder withLocation(StackTraceElement location) {
         this.location = location;
         return this;
@@ -220,9 +229,16 @@ public class DefaultLogBuilder implements LogBuilder {
         }
     }
 
+    @Override
+    public void log() {
+        if (isValid()) {
+            logMessage(EMPTY_MESSAGE);
+        }
+    }
+
     private void logMessage(Message message) {
         try {
-            logger.logMessage(level, marker, FQCN, location, message, throwable);
+            logger.logMessage(level, marker, fqcn, location, message, throwable);
         } finally {
             inUse = false;
         }

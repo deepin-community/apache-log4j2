@@ -16,12 +16,19 @@
  */
 package org.apache.logging.log4j.core.appender.db.jdbc;
 
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
+import static org.mockito.BDDMockito.given;
+import static org.mockito.Mockito.mock;
+
 import java.io.ByteArrayOutputStream;
 import java.io.PrintWriter;
 import java.sql.Connection;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
+
 import javax.sql.DataSource;
 
 import org.apache.logging.log4j.LogManager;
@@ -34,17 +41,11 @@ import org.h2.util.IOUtils;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.RuleChain;
-import org.mockito.invocation.InvocationOnMock;
-import org.mockito.stubbing.Answer;
-
-import static org.junit.Assert.*;
-import static org.mockito.BDDMockito.given;
-import static org.mockito.Mockito.mock;
 
 /**
  * Abstract unit test for JdbcAppender using a {@link DataSource} configuration.
  */
-public abstract class AbstractJdbcAppenderDataSourceTest {
+public abstract class AbstractJdbcAppenderDataSourceTest extends AbstractJdbcDataSourceTest {
 
     @Rule
     public final RuleChain rules;
@@ -62,12 +63,7 @@ public abstract class AbstractJdbcAppenderDataSourceTest {
     private DataSource createMockDataSource() {
         try {
             final DataSource dataSource = mock(DataSource.class);
-            given(dataSource.getConnection()).willAnswer(new Answer<Connection>() {
-                @Override
-                public Connection answer(final InvocationOnMock invocation) throws Throwable {
-                    return jdbcRule.getConnectionSource().getConnection();
-                }
-            });
+            given(dataSource.getConnection()).willAnswer(invocation -> jdbcRule.getConnectionSource().getConnection());
             return dataSource;
         } catch (final SQLException e) {
             Throwables.rethrow(e);

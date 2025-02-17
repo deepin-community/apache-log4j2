@@ -24,7 +24,6 @@ import java.util.concurrent.locks.ReentrantReadWriteLock;
 import org.apache.logging.log4j.Level;
 import org.apache.logging.log4j.Marker;
 import org.apache.logging.log4j.core.LogEvent;
-import org.apache.logging.log4j.core.impl.LocationAware;
 import org.apache.logging.log4j.message.Message;
 import org.apache.logging.log4j.util.Supplier;
 
@@ -34,7 +33,7 @@ import org.apache.logging.log4j.util.Supplier;
 public class LockingReliabilityStrategy implements ReliabilityStrategy, LocationAwareReliabilityStrategy {
     private final LoggerConfig loggerConfig;
     private final ReadWriteLock reconfigureLock = new ReentrantReadWriteLock();
-    private volatile boolean isStopping = false;
+    private volatile boolean isStopping;
 
     public LockingReliabilityStrategy(final LoggerConfig loggerConfig) {
         this.loggerConfig = Objects.requireNonNull(loggerConfig, "loggerConfig was null");

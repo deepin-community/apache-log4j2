@@ -57,15 +57,14 @@ public final class IfFileName implements PathCondition {
      * @param regex the regular expression that matches the baseDir-relative path of the file(s) to delete
      * @param nestedConditions nested conditions to evaluate if this condition accepts a path
      */
-    private IfFileName(final String glob, final String regex, final PathCondition[] nestedConditions) {
+    private IfFileName(final String glob, final String regex, final PathCondition... nestedConditions) {
         if (regex == null && glob == null) {
             throw new IllegalArgumentException("Specify either a path glob or a regular expression. "
                     + "Both cannot be null.");
         }
         this.syntaxAndPattern = createSyntaxAndPatternString(glob, regex);
         this.pathMatcher = FileSystems.getDefault().getPathMatcher(syntaxAndPattern);
-        this.nestedConditions = nestedConditions == null ? new PathCondition[0] : Arrays.copyOf(nestedConditions,
-                nestedConditions.length);
+        this.nestedConditions = PathCondition.copy(nestedConditions);
     }
 
     static String createSyntaxAndPatternString(final String glob, final String regex) {

@@ -29,6 +29,7 @@ import java.nio.file.attribute.FileTime;
 import java.util.Collection;
 import java.util.Date;
 import java.util.concurrent.ArrayBlockingQueue;
+import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Semaphore;
 import java.util.concurrent.ThreadPoolExecutor;
@@ -67,10 +68,11 @@ public class RollingFileManager extends FileManager {
     private final Log4jThreadFactory threadFactory = Log4jThreadFactory.createThreadFactory("RollingFileManager");
     private volatile TriggeringPolicy triggeringPolicy;
     private volatile RolloverStrategy rolloverStrategy;
-    private volatile boolean renameEmptyFiles = false;
-    private volatile boolean initialized = false;
+    private volatile boolean renameEmptyFiles;
+    private volatile boolean initialized;
     private volatile String fileName;
     private final boolean directWrite;
+    private final CopyOnWriteArrayList<RolloverListener> rolloverListeners = new CopyOnWriteArrayList<>();
 
     /* This executor pool will create a new Thread for every work async action to be performed. Using it allows
        us to make sure all the Threads are completed when the Manager is stopped. */
@@ -155,6 +157,16 @@ public class RollingFileManager extends FileManager {
         if (!initialized) {
             LOGGER.debug("Initializing triggering policy {}", triggeringPolicy);
             initialized = true;
+            // LOG4J2-2981 - set the file size before initializing the triggering policy.
+            if (directWrite) {
+                // LOG4J2-2485: Initialize size from the most recently written file.
+                File file = new File(getFileName());
+                if (file.exists()) {
+                    size = file.length();
+                } else {
+                    ((DirectFileRolloverStrategy) rolloverStrategy).clearCurrentFileName();
+                }
+            }
             triggeringPolicy.initialize(this);
             if (triggeringPolicy instanceof LifeCycle) {
                 ((LifeCycle) triggeringPolicy).start();
@@ -208,6 +220,22 @@ public class RollingFileManager extends FileManager {
     }
 
     /**
+     * Add a RolloverListener.
+     * @param listener The RolloverListener.
+     */
+    public void addRolloverListener(RolloverListener listener) {
+        rolloverListeners.add(listener);
+    }
+
+    /**
+     * Remove a RolloverListener.
+     * @param listener The RolloverListener.
+     */
+    public void removeRolloverListener(RolloverListener listener) {
+        rolloverListeners.remove(listener);
+    }
+
+    /**
      * Returns the name of the File being managed.
      * @return The name of the File being managed.
      */
@@ -217,6 +245,13 @@ public class RollingFileManager extends FileManager {
             fileName = ((DirectFileRolloverStrategy) rolloverStrategy).getCurrentFileName(this);
         }
         return fileName;
+    }
+    
+    @Override
+    protected void createParentDir(File file) {
+        if (directWrite) {
+            file.getParentFile().mkdirs();
+        }
     }
 
     public boolean isDirectWrite() {
@@ -327,22 +362,57 @@ public class RollingFileManager extends FileManager {
     }
 
     public synchronized void rollover(Date prevFileTime, Date prevRollTime) {
+        LOGGER.debug("Rollover PrevFileTime: {}, PrevRollTime: {}", prevFileTime.getTime(),
+                prevRollTime.getTime());
 		getPatternProcessor().setPrevFileTime(prevFileTime.getTime());
 		getPatternProcessor().setCurrentFileTime(prevRollTime.getTime());
 		rollover();
 	}
 
     public synchronized void rollover() {
-        if (!hasOutputStream() && !isCreateOnDemand()) {
+        if (!hasOutputStream() && !isCreateOnDemand() && !isDirectWrite()) {
             return;
         }
-        if (rollover(rolloverStrategy)) {
-            try {
-                size = 0;
-                initialTime = System.currentTimeMillis();
-                createFileAfterRollover();
-            } catch (final IOException e) {
-                logError("Failed to create file after rollover", e);
+        String currentFileName = fileName;
+        if (rolloverListeners.size() > 0) {
+            for (RolloverListener listener : rolloverListeners) {
+                try {
+                    listener.rolloverTriggered(currentFileName);
+                } catch (Exception ex) {
+                    LOGGER.warn("Rollover Listener {} failed with {}: {}", listener.getClass().getSimpleName(),
+                            ex.getClass().getName(), ex.getMessage());
+                }
+            }
+        }
+
+        boolean interrupted = Thread.interrupted(); // clear interrupted state
+        try {
+            if (interrupted) {
+                LOGGER.warn("RollingFileManager cleared thread interrupted state, continue to rollover");
+            }
+
+            if (rollover(rolloverStrategy)) {
+                try {
+                    size = 0;
+                    initialTime = System.currentTimeMillis();
+                    createFileAfterRollover();
+                } catch (final IOException e) {
+                    logError("Failed to create file after rollover", e);
+                }
+            }
+        } finally {
+            if (interrupted) { // restore interrupted state
+                Thread.currentThread().interrupt();
+            }
+        }
+        if (rolloverListeners.size() > 0) {
+            for (RolloverListener listener : rolloverListeners) {
+                try {
+                    listener.rolloverComplete(currentFileName);
+                } catch (Exception ex) {
+                    LOGGER.warn("Rollover Listener {} failed with {}: {}", listener.getClass().getSimpleName(),
+                            ex.getClass().getName(), ex.getMessage());
+                }
             }
         }
     }
@@ -375,10 +445,8 @@ public class RollingFileManager extends FileManager {
             if (policy instanceof LifeCycle) {
                 ((LifeCycle) policy).stop();
             }
-        } else {
-            if (triggeringPolicy instanceof LifeCycle) {
-                ((LifeCycle) triggeringPolicy).stop();
-            }
+        } else if (triggeringPolicy instanceof LifeCycle) {
+            ((LifeCycle) triggeringPolicy).stop();
         }
     }
 
@@ -399,6 +467,15 @@ public class RollingFileManager extends FileManager {
     public <T extends TriggeringPolicy> T getTriggeringPolicy() {
         // TODO We could parameterize this class with a TriggeringPolicy instead of type casting here.
         return (T) this.triggeringPolicy;
+    }
+
+    /**
+     * Package-private access for tests only.
+     *
+     * @return The semaphore that controls access to the rollover operation.
+     */
+    Semaphore getSemaphore() {
+        return semaphore;
     }
 
     /**

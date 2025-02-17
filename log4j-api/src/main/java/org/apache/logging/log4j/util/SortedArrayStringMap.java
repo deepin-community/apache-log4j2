@@ -67,17 +67,12 @@ public class SortedArrayStringMap implements IndexedStringMap {
     private static final long serialVersionUID = -5748905872274478116L;
     private static final int HASHVAL = 31;
 
-    private static final TriConsumer<String, Object, StringMap> PUT_ALL = new TriConsumer<String, Object, StringMap>() {
-        @Override
-        public void accept(final String key, final Object value, final StringMap contextData) {
-            contextData.putValue(key, value);
-        }
-    };
+    private static final TriConsumer<String, Object, StringMap> PUT_ALL = (key, value, contextData) -> contextData.putValue(key, value);
 
     /**
      * An empty array instance to share when the table is not inflated.
      */
-    private static final String[] EMPTY = {};
+    private static final String[] EMPTY = Strings.EMPTY_ARRAY;
     private static final String FROZEN = "Frozen collection cannot be modified";
 
     private transient String[] keys = EMPTY;
@@ -156,7 +151,8 @@ public class SortedArrayStringMap implements IndexedStringMap {
     public SortedArrayStringMap(final Map<String, ?> map) {
         resize(ceilingNextPowerOfTwo(map.size()));
         for (final Map.Entry<String, ?> entry : map.entrySet()) {
-            putValue(entry.getKey(), entry.getValue());
+            // The key might not actually be a String.
+            putValue(Objects.toString(entry.getKey(), null), entry.getValue());
         }
     }
 

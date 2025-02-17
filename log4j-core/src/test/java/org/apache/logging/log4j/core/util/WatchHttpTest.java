@@ -32,12 +32,11 @@ import org.apache.logging.log4j.core.config.ConfigurationScheduler;
 import org.apache.logging.log4j.core.config.DefaultConfiguration;
 import org.apache.logging.log4j.core.config.HttpWatcher;
 import org.apache.logging.log4j.core.config.Reconfigurable;
+import org.apache.logging.log4j.core.net.UrlConnectionFactory;
 import org.apache.logging.log4j.core.net.ssl.TestConstants;
 import org.apache.logging.log4j.core.util.datetime.FastDateFormat;
 import org.apache.logging.log4j.util.PropertiesUtil;
-import org.junit.After;
 import org.junit.Assume;
-import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Rule;
 import org.junit.Test;
@@ -68,6 +67,7 @@ public class WatchHttpTest {
 
     @BeforeClass
     public static void beforeClass() {
+        System.setProperty(UrlConnectionFactory.ALLOWED_PROTOCOLS, "http,https");
         try {
             formatter = FastDateFormat.getInstance("EEE, dd MMM yyyy HH:mm:ss", TimeZone.getTimeZone("UTC"));
         } catch (Exception ex) {
@@ -108,7 +108,7 @@ public class WatchHttpTest {
         scheduler.start();
         watchManager.start();
         try {
-            watchManager.watch(new Source(url.toURI(), previous.getTimeInMillis()), new HttpWatcher(configuration, null,
+            watchManager.watch(new Source(url), new HttpWatcher(configuration, null,
                 listeners, previous.getTimeInMillis()));
             final String str = queue.poll(2, TimeUnit.SECONDS);
             assertNotNull("File change not detected", str);
@@ -144,7 +144,7 @@ public class WatchHttpTest {
         scheduler.start();
         watchManager.start();
         try {
-            watchManager.watch(new Source(url.toURI(), previous.getTimeInMillis()), new HttpWatcher(configuration, null,
+            watchManager.watch(new Source(url), new HttpWatcher(configuration, null,
                 listeners, previous.getTimeInMillis()));
             final String str = queue.poll(2, TimeUnit.SECONDS);
             assertNull("File changed.", str);
@@ -155,7 +155,7 @@ public class WatchHttpTest {
         }
     }
 
-    private class TestConfigurationListener implements ConfigurationListener {
+    private static class TestConfigurationListener implements ConfigurationListener {
         private final Queue<String> queue;
         private final String name;
 

@@ -16,21 +16,21 @@
  */
 package org.apache.log4j.config;
 
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
-import org.apache.logging.log4j.core.net.mock.MockSyslogServer;
-import org.apache.logging.log4j.core.net.mock.MockSyslogServerFactory;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.BeforeClass;
-import org.junit.Test;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotNull;
 
 import java.io.IOException;
 import java.util.List;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.assertNotNull;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+import org.apache.logging.log4j.core.config.ConfigurationFactory;
+import org.apache.logging.log4j.core.net.mock.MockSyslogServer;
+import org.apache.logging.log4j.core.net.mock.MockSyslogServerFactory;
+import org.junit.After;
+import org.junit.AfterClass;
+import org.junit.BeforeClass;
+import org.junit.Test;
 
 
 /**
@@ -38,16 +38,18 @@ import static org.junit.Assert.assertNotNull;
  */
 public class SyslogAppenderTest {
 
+    // TODO Use an ephemeral port, save it in a sys prop, and update test config files.
     private static final int PORTNUM = 9999;
     private MockSyslogServer syslogServer;
 
     @BeforeClass
     public static void beforeClass() {
-        System.setProperty("log4j.configuration", "target/test-classes/log4j1-syslog.xml");
+        System.setProperty(ConfigurationFactory.LOG4J1_CONFIGURATION_FILE_PROPERTY, "target/test-classes/log4j1-syslog.xml");
     }
 
-    @Before
-    public void setUp() {
+    @AfterClass
+    public static void afterClass() {
+        System.clearProperty(ConfigurationFactory.LOG4J1_CONFIGURATION_FILE_PROPERTY);
     }
 
     @After

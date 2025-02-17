@@ -20,32 +20,24 @@ import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
 
-import org.apache.logging.log4j.junit.ThreadContextRule;
-import org.junit.Rule;
-import org.junit.Test;
+import org.apache.logging.log4j.junit.UsingAnyThreadContext;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 
-import static org.junit.Assert.*;
+import static org.junit.jupiter.api.Assertions.*;
 
-/**
- *
- */
+@UsingAnyThreadContext
 public class ThreadContextTest {
     public static void reinitThreadContext() {
         ThreadContext.init();
     }
 
-    @Rule
-    public ThreadContextRule threadContextRule = new ThreadContextRule();
-
     @Test
     public void testPush() {
         ThreadContext.push("Hello");
-        ThreadContext.push("{} is {}", ThreadContextTest.class.getSimpleName(),
-                "running");
-        assertEquals("Incorrect parameterized stack value",
-                ThreadContext.pop(), "ThreadContextTest is running");
-        assertEquals("Incorrect simple stack value", ThreadContext.pop(),
-                "Hello");
+        ThreadContext.push("{} is {}", ThreadContextTest.class.getSimpleName(), "running");
+        assertEquals(ThreadContext.pop(), "ThreadContextTest is running", "Incorrect parameterized stack value");
+        assertEquals(ThreadContext.pop(), "Hello", "Incorrect simple stack value");
     }
 
     @Test
@@ -56,19 +48,18 @@ public class ThreadContextTest {
         thread.start();
         thread.join();
         String str = sb.toString();
-        assertTrue("Unexpected ThreadContext value. Expected null. Actual "
-                + str, "null".equals(str));
+        assertEquals("null", str, "Unexpected ThreadContext value. Expected null. Actual " + str);
         sb = new StringBuilder();
         thread = new TestThread(sb);
         thread.start();
         thread.join();
         str = sb.toString();
-        assertTrue("Unexpected ThreadContext value. Expected null. Actual "
-                + str, "null".equals(str));
+        assertEquals("null", str, "Unexpected ThreadContext value. Expected null. Actual " + str);
     }
 
     @Test
-    public void perfTest() throws Exception {
+    @Tag("performance")
+    public void perfTest() {
         ThreadContextUtilityClass.perfTest();
     }
 
@@ -87,12 +78,12 @@ public class ThreadContextTest {
         ThreadContextUtilityClass.testGetImmutableContextReturnsEmptyMapIfEmpty();
     }
 
-    @Test(expected = UnsupportedOperationException.class)
+    @Test
     public void testGetImmutableContextReturnsImmutableMapIfNonEmpty() {
         ThreadContextUtilityClass.testGetImmutableContextReturnsImmutableMapIfNonEmpty();
     }
 
-    @Test(expected = UnsupportedOperationException.class)
+    @Test
     public void testGetImmutableContextReturnsImmutableMapIfEmpty() {
         ThreadContextUtilityClass.testGetImmutableContextReturnsImmutableMapIfEmpty();
     }
@@ -113,9 +104,9 @@ public class ThreadContextTest {
         assertNull(ThreadContext.get("testKey"));
         ThreadContext.put("testKey", "testValue");
         assertEquals("testValue", ThreadContext.get("testKey"));
-        assertEquals("Incorrect value in test key", "testValue", ThreadContext.get("testKey"));
+        assertEquals("testValue", ThreadContext.get("testKey"), "Incorrect value in test key");
         ThreadContext.putIfNull("testKey", "new Value");
-        assertEquals("Incorrect value in test key", "testValue", ThreadContext.get("testKey"));
+        assertEquals("testValue", ThreadContext.get("testKey"), "Incorrect value in test key");
         ThreadContext.clearMap();
     }
 
@@ -171,7 +162,7 @@ public class ThreadContextTest {
         assertFalse(ThreadContext.containsKey("testKey"));
     }
 
-    private class TestThread extends Thread {
+    private static class TestThread extends Thread {
 
         private final StringBuilder sb;
 

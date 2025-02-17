@@ -35,12 +35,13 @@ log4j-core-its/pom.xml --ignore
 log4j-core-java9/pom.xml --has-package-version --java-lib
 log4j-couchdb/pom.xml --has-package-version --java-lib
 log4j-docker/pom.xml --ignore
+log4j-jakarta-smtp/pom.xml --ignore
 log4j-jdbc-dbcp2/pom.xml --ignore
 log4j-jpl/pom.xml --ignore
 log4j-kubernetes/pom.xml --ignore
 log4j-1.2-api/pom.xml --has-package-version --java-lib
 log4j-slf4j-impl/pom.xml --ignore
-log4j-slf4j18-impl/pom.xml --ignore
+log4j-slf4j2-impl/pom.xml --ignore
 log4j-spring-cloud-config/pom.xml --ignore
 log4j-to-slf4j/pom.xml --has-package-version --java-lib
 log4j-jcl/pom.xml --has-package-version --java-lib
@@ -51,10 +52,15 @@ log4j-jmx-gui/pom.xml --ignore
 log4j-samples/pom.xml --ignore
 log4j-osgi/pom.xml --ignore
 log4j-bom/pom.xml --no-parent --has-package-version
-log4j-mongodb2/pom.xml --ignore
+log4j-mongodb4/pom.xml --ignore
 log4j-mongodb3/pom.xml --has-package-version --java-lib
 log4j-web/pom.xml --has-package-version --java-lib
 log4j-jul/pom.xml --has-package-version --java-lib
 log4j-perf/pom.xml --ignore
 log4j-iostreams/pom.xml --ignore
 log4j-liquibase/pom.xml --ignore
+log4j-distribution/pom.xml --ignore
+log4j-jakarta-web/pom.xml --ignore
+log4j-layout-template-json/pom.xml --ignore
+log4j-spring-boot/pom.xml --ignore
+log4j-to-jul/pom.xml --has-package-version --java-lib

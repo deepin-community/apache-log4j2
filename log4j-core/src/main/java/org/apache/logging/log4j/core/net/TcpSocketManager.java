@@ -218,8 +218,8 @@ public class TcpSocketManager extends AbstractSocketManager {
             try {
                 writeAndFlush(bytes, offset, length, immediateFlush);
             } catch (final IOException causeEx) {
+                final String config = inetAddress + ":" + port;
                 if (retry && reconnector == null) {
-                    final String config = inetAddress + ":" + port;
                     reconnector = createReconnector();
                     try {
                         reconnector.reconnect();
@@ -238,7 +238,10 @@ public class TcpSocketManager extends AbstractSocketManager {
                                         config),
                                 causeEx);
                     }
+                    return;
                 }
+                final String message = String.format("Error writing to %s for connection %s", getName(), config);
+                throw new AppenderLoggingException(message, causeEx);
             }
         }
     }
@@ -342,7 +345,7 @@ public class TcpSocketManager extends AbstractSocketManager {
         }
 
         void reconnect() throws IOException {
-            List<InetSocketAddress> socketAddresses = FACTORY.resolver.resolveHost(host, port);
+            List<InetSocketAddress> socketAddresses = TcpSocketManagerFactory.RESOLVER.resolveHost(host, port);
             if (socketAddresses.size() == 1) {
                 LOGGER.debug("Reconnecting " + socketAddresses.get(0));
                 connect(socketAddresses.get(0));
@@ -456,7 +459,7 @@ public class TcpSocketManager extends AbstractSocketManager {
     protected static class TcpSocketManagerFactory<M extends TcpSocketManager, T extends FactoryData>
             implements ManagerFactory<M, T> {
 
-        static HostResolver resolver = new HostResolver();
+        static volatile HostResolver RESOLVER = HostResolver.INSTANCE;
 
         @SuppressWarnings("resource")
         @Override
@@ -476,7 +479,7 @@ public class TcpSocketManager extends AbstractSocketManager {
                 os = socket.getOutputStream();
                 return createManager(name, os, socket, inetAddress, data);
             } catch (final IOException ex) {
-                LOGGER.error("TcpSocketManager ({}) caught exception and will continue:", name, ex, ex);
+                LOGGER.error("TcpSocketManager ({}) caught exception and will continue:", name, ex);
                 os = NullOutputStream.getInstance();
             }
             if (data.reconnectDelayMillis == 0) {
@@ -494,7 +497,7 @@ public class TcpSocketManager extends AbstractSocketManager {
         }
 
         Socket createSocket(final T data) throws IOException {
-            List<InetSocketAddress> socketAddresses = resolver.resolveHost(data.host, data.port);
+            List<InetSocketAddress> socketAddresses = RESOLVER.resolveHost(data.host, data.port);
             IOException ioe = null;
             for (InetSocketAddress socketAddress : socketAddresses) {
                 try {
@@ -534,10 +537,15 @@ public class TcpSocketManager extends AbstractSocketManager {
      * @param resolver the HostResolver.
      */
     public static void setHostResolver(HostResolver resolver) {
-        TcpSocketManagerFactory.resolver = resolver;
+        TcpSocketManagerFactory.RESOLVER = resolver;
     }
 
     public static class HostResolver {
+        
+        /**
+         * Singleton instance.
+         */
+        public static final HostResolver INSTANCE = new HostResolver();
 
         public List<InetSocketAddress> resolveHost(String host, int port) throws UnknownHostException {
             InetAddress[] addresses = InetAddress.getAllByName(host);

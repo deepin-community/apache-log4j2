@@ -16,23 +16,23 @@
  */
 package org.apache.logging.log4j.message;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
-
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.util.Locale;
+import java.util.ResourceBundle;
 
 import org.apache.logging.log4j.junit.Mutable;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.parallel.ResourceAccessMode;
+import org.junit.jupiter.api.parallel.ResourceLock;
+import org.junit.jupiter.api.parallel.Resources;
 
-/**
- *
- */
+import static org.junit.jupiter.api.Assertions.*;
+
+@ResourceLock(value = Resources.LOCALE, mode = ResourceAccessMode.READ)
 public class StringFormattedMessageTest {
 
     private static final int LOOP_CNT = 500;
@@ -86,7 +86,7 @@ public class StringFormattedMessageTest {
         final String expected = "Test message Apache";
         assertEquals(expected, result);
         final Throwable t = msg.getThrowable();
-        assertNotNull("No Throwable", t);
+        assertNotNull(t, "No Throwable");
     }
 
     @Test
@@ -98,7 +98,7 @@ public class StringFormattedMessageTest {
         // modify parameter before calling msg.getFormattedMessage
         param.set("XYZ");
         final String actual = msg.getFormattedMessage();
-        assertEquals("Should use initial param value", "Test message XYZ", actual);
+        assertEquals("Test message XYZ", actual, "Should use initial param value");
     }
 
     @Test
@@ -111,7 +111,7 @@ public class StringFormattedMessageTest {
         msg.getFormattedMessage();
         param.set("XYZ");
         final String actual = msg.getFormattedMessage();
-        assertEquals("Should use initial param value", "Test message abc", actual);
+        assertEquals("Test message abc", actual, "Should use initial param value");
     }
 
     @Test
@@ -124,9 +124,30 @@ public class StringFormattedMessageTest {
         final ByteArrayInputStream bais = new ByteArrayInputStream(baos.toByteArray());
         final ObjectInputStream in = new ObjectInputStream(bais);
         final StringFormattedMessage actual = (StringFormattedMessage) in.readObject();
-        Assert.assertEquals(expected, actual);
-        Assert.assertEquals(expected.getFormat(), actual.getFormat());
-        Assert.assertEquals(expected.getFormattedMessage(), actual.getFormattedMessage());
-        Assert.assertArrayEquals(expected.getParameters(), actual.getParameters());
+        assertEquals(expected, actual);
+        assertEquals(expected.getFormat(), actual.getFormat());
+        assertEquals(expected.getFormattedMessage(), actual.getFormattedMessage());
+        assertArrayEquals(expected.getParameters(), actual.getParameters());
     }
+    
+    @Test
+    public void testPercentInMessageNoArgs() {
+        // LOG4J2-3458 LocalizedMessage causes a lot of noise on the console
+        //
+        // ERROR StatusLogger Unable to format msg: C:/Program%20Files/Some%20Company/Some%20Product%20Name/
+        // java.util.UnknownFormatConversionException: Conversion = 'F'
+        // at java.util.Formatter$FormatSpecifier.conversion(Formatter.java:2691)
+        // at java.util.Formatter$FormatSpecifier.<init>(Formatter.java:2720)
+        // at java.util.Formatter.parse(Formatter.java:2560)
+        // at java.util.Formatter.format(Formatter.java:2501)
+        // at java.util.Formatter.format(Formatter.java:2455)
+        // at java.lang.String.format(String.java:2981)
+        // at org.apache.logging.log4j.message.StringFormattedMessage.formatMessage(StringFormattedMessage.java:120)
+        // at org.apache.logging.log4j.message.StringFormattedMessage.getFormattedMessage(StringFormattedMessage.java:88)
+        // at
+        // org.apache.logging.log4j.message.StringFormattedMessageTest.testPercentInMessageNoArgs(StringFormattedMessageTest.java:153)
+        final StringFormattedMessage msg = new StringFormattedMessage("C:/Program%20Files/Some%20Company/Some%20Product%20Name/", new Object[] {});
+        assertEquals("C:/Program%20Files/Some%20Company/Some%20Product%20Name/", msg.getFormattedMessage());
+    }
+
 }

@@ -42,6 +42,7 @@ import org.apache.logging.log4j.core.config.plugins.PluginBuilderFactory;
 import org.apache.logging.log4j.core.config.plugins.PluginElement;
 import org.apache.logging.log4j.core.script.AbstractScript;
 import org.apache.logging.log4j.core.script.ScriptManager;
+import org.apache.logging.log4j.core.script.ScriptRef;
 import org.apache.logging.log4j.core.util.Booleans;
 
 /**
@@ -83,6 +84,17 @@ public final class RoutingAppender extends AbstractAppender {
             if (routes == null) {
                 LOGGER.error("No routes defined for RoutingAppender {}", name);
                 return null;
+            }
+            if (defaultRouteScript != null) {
+                if (getConfiguration().getScriptManager() == null) {
+                    LOGGER.error("Script support is not enabled");
+                    return null;
+                }
+                if (!(defaultRouteScript instanceof ScriptRef)) {
+                    if (!getConfiguration().getScriptManager().addScript(defaultRouteScript)) {
+                        return null;
+                    }
+                }
             }
             return new RoutingAppender(name, getFilter(), isIgnoreExceptions(), routes, rewritePolicy,
                     getConfiguration(), purgePolicy, defaultRouteScript, getPropertyArray());
@@ -176,7 +188,6 @@ public final class RoutingAppender extends AbstractAppender {
                 error("No Configuration defined for RoutingAppender; required for Script element.");
             } else {
                 final ScriptManager scriptManager = configuration.getScriptManager();
-                scriptManager.addScript(defaultRouteScript);
                 final Bindings bindings = scriptManager.createBindings(defaultRouteScript);
                 bindings.put(STATIC_VARIABLES_KEY, scriptStaticVariables);
                 final Object object = scriptManager.execute(defaultRouteScript.getName(), bindings);
@@ -337,13 +348,11 @@ public final class RoutingAppender extends AbstractAppender {
             // Don't attempt to stop the appender in a synchronized block, since it may block flushing events
             // to disk.
             control.tryStopAppender();
+        } else if (referencedAppenders.containsKey(key)) {
+            LOGGER.debug("Route {} using an appender reference may not be removed because " +
+                    "the appender may be used outside of the RoutingAppender", key);
         } else {
-            if (referencedAppenders.containsKey(key)) {
-                LOGGER.debug("Route {} using an appender reference may not be removed because " +
-                        "the appender may be used outside of the RoutingAppender", key);
-            } else {
-                LOGGER.debug("Route with {} key already deleted", key);
-            }
+            LOGGER.debug("Route with {} key already deleted", key);
         }
     }
 
@@ -413,7 +422,7 @@ public final class RoutingAppender extends AbstractAppender {
      * LOG4J2-2629: PurgePolicy implementations can invoke {@link #deleteAppender(String)} after we have looked up
      * an instance of a target appender but before events are appended, which could result in events not being
      * recorded to any appender.
-     * This extension of {@link AppenderControl} allows to to mark usage of an appender, allowing deferral of
+     * This extension of {@link AppenderControl} allows to mark usage of an appender, allowing deferral of
      * {@link Appender#stop()} until events have successfully been recorded.
      * Alternative approaches considered:
      * - More aggressive synchronization: Appenders may do expensive I/O that shouldn't block routing.
@@ -435,7 +444,7 @@ public final class RoutingAppender extends AbstractAppender {
 
     private static final class CreatedRouteAppenderControl extends RouteAppenderControl {
 
-        private volatile boolean pendingDeletion = false;
+        private volatile boolean pendingDeletion;
         private final AtomicInteger depth = new AtomicInteger();
 
         CreatedRouteAppenderControl(Appender appender) {

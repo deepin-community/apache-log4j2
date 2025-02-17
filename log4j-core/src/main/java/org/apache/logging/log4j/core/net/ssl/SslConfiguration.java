@@ -20,6 +20,7 @@ import java.security.KeyManagementException;
 import java.security.KeyStoreException;
 import java.security.NoSuchAlgorithmException;
 import java.security.UnrecoverableKeyException;
+import java.util.Objects;
 
 import javax.net.ssl.KeyManager;
 import javax.net.ssl.KeyManagerFactory;
@@ -259,13 +260,7 @@ public class SslConfiguration {
 
     @Override
     public int hashCode() {
-        final int prime = 31;
-        int result = 1;
-        result = prime * result + ((keyStoreConfig == null) ? 0 : keyStoreConfig.hashCode());
-        result = prime * result + ((protocol == null) ? 0 : protocol.hashCode());
-        result = prime * result + ((sslContext == null) ? 0 : sslContext.hashCode());
-        result = prime * result + ((trustStoreConfig == null) ? 0 : trustStoreConfig.hashCode());
-        return result;
+        return Objects.hash(keyStoreConfig, protocol, sslContext, trustStoreConfig);
     }
 
     @Override
@@ -280,32 +275,16 @@ public class SslConfiguration {
             return false;
         }
         final SslConfiguration other = (SslConfiguration) obj;
-        if (keyStoreConfig == null) {
-            if (other.keyStoreConfig != null) {
-                return false;
-            }
-        } else if (!keyStoreConfig.equals(other.keyStoreConfig)) {
+        if (!Objects.equals(keyStoreConfig, other.keyStoreConfig)) {
             return false;
         }
-        if (protocol == null) {
-            if (other.protocol != null) {
-                return false;
-            }
-        } else if (!protocol.equals(other.protocol)) {
+        if (!Objects.equals(protocol, other.protocol)) {
             return false;
         }
-        if (sslContext == null) {
-            if (other.sslContext != null) {
-                return false;
-            }
-        } else if (!sslContext.equals(other.sslContext)) {
+        if (!Objects.equals(sslContext, other.sslContext)) {
             return false;
         }
-        if (trustStoreConfig == null) {
-            if (other.trustStoreConfig != null) {
-                return false;
-            }
-        } else if (!trustStoreConfig.equals(other.trustStoreConfig)) {
+        if (!Objects.equals(trustStoreConfig, other.trustStoreConfig)) {
             return false;
         }
         return true;

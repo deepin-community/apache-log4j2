@@ -16,11 +16,26 @@
  */
 package org.apache.log4j.xml;
 
+import java.io.IOException;
+import java.io.InterruptedIOException;
+import java.lang.reflect.Method;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.Properties;
+import java.util.concurrent.atomic.AtomicReference;
+import java.util.function.Consumer;
+import java.util.stream.IntStream;
+
+import javax.xml.parsers.DocumentBuilder;
+import javax.xml.parsers.DocumentBuilderFactory;
+import javax.xml.parsers.FactoryConfigurationError;
+
 import org.apache.log4j.Appender;
 import org.apache.log4j.Layout;
 import org.apache.log4j.Level;
 import org.apache.log4j.bridge.AppenderAdapter;
 import org.apache.log4j.bridge.AppenderWrapper;
+import org.apache.log4j.bridge.FilterAdapter;
 import org.apache.log4j.config.Log4j1Configuration;
 import org.apache.log4j.config.PropertySetter;
 import org.apache.log4j.helpers.OptionConverter;
@@ -29,9 +44,13 @@ import org.apache.log4j.spi.AppenderAttachable;
 import org.apache.log4j.spi.ErrorHandler;
 import org.apache.log4j.spi.Filter;
 import org.apache.logging.log4j.core.LoggerContext;
+import org.apache.logging.log4j.core.appender.rolling.TriggeringPolicy;
+import org.apache.logging.log4j.core.Filter.Result;
+import org.apache.logging.log4j.core.config.Configuration;
 import org.apache.logging.log4j.core.config.ConfigurationSource;
 import org.apache.logging.log4j.core.config.LoggerConfig;
 import org.apache.logging.log4j.core.config.status.StatusConfiguration;
+import org.apache.logging.log4j.core.filter.ThresholdFilter;
 import org.apache.logging.log4j.status.StatusLogger;
 import org.apache.logging.log4j.util.LoaderUtil;
 import org.w3c.dom.Document;
@@ -42,17 +61,6 @@ import org.w3c.dom.NodeList;
 import org.xml.sax.InputSource;
 import org.xml.sax.SAXException;
 import org.xml.sax.SAXParseException;
-
-import javax.xml.parsers.DocumentBuilder;
-import javax.xml.parsers.DocumentBuilderFactory;
-import javax.xml.parsers.FactoryConfigurationError;
-import java.io.IOException;
-import java.io.InterruptedIOException;
-import java.lang.reflect.Method;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.Properties;
-import java.util.function.Consumer;
 
 /**
  * Class Description goes here.
@@ -83,12 +91,14 @@ public class XmlConfiguration extends Log4j1Configuration {
     private static final String ADDITIVITY_ATTR = "additivity";
     private static final String CONFIG_DEBUG_ATTR = "configDebug";
     private static final String INTERNAL_DEBUG_ATTR = "debug";
+    private static final String THRESHOLD_ATTR = "threshold";
     private static final String EMPTY_STR = "";
-    private static final Class[] ONE_STRING_PARAM = new Class[]{String.class};
+    private static final Class<?>[] ONE_STRING_PARAM = new Class[] { String.class };
     private static final String dbfKey = "javax.xml.parsers.DocumentBuilderFactory";
     private static final String THROWABLE_RENDERER_TAG = "throwableRenderer";
 
     public static final long DEFAULT_DELAY = 60000;
+
     /**
      * File name prefix for test configurations.
      */
@@ -115,19 +125,22 @@ public class XmlConfiguration extends Log4j1Configuration {
     }
 
     /**
-     * Configure log4j by reading in a log4j.dtd compliant XML
+     * Configures log4j by reading in a log4j.dtd compliant XML
      * configuration file.
      */
     @Override
     public void doConfigure() throws FactoryConfigurationError {
         ConfigurationSource source = getConfigurationSource();
         ParseAction action = new ParseAction() {
+            @Override
             public Document parse(final DocumentBuilder parser) throws SAXException, IOException {
+                @SuppressWarnings("resource") // The ConfigurationSource and its caller manages the InputStream.
                 InputSource inputSource = new InputSource(source.getInputStream());
                 inputSource.setSystemId("dummy://log4j.dtd");
                 return parser.parse(inputSource);
             }
 
+            @Override
             public String toString() {
                 return getConfigurationSource().getLocation();
             }
@@ -165,6 +178,23 @@ public class XmlConfiguration extends Log4j1Configuration {
             // I know this is miserable...
             LOGGER.error("Could not parse " + action.toString() + ".", e);
         }
+    }
+
+    @Override
+    public Configuration reconfigure() {
+        try {
+            final ConfigurationSource source = getConfigurationSource().resetInputStream();
+            if (source == null) {
+                return null;
+            }
+            final XmlConfigurationFactory factory = new XmlConfigurationFactory();
+            final XmlConfiguration config =
+                    (XmlConfiguration) factory.getConfiguration(getLoggerContext(), source);
+            return config == null || config.getState() != State.INITIALIZING ? null : config;
+        } catch (final IOException ex) {
+            LOGGER.error("Cannot locate file {}: {}", getConfigurationSource(), ex);
+        }
+        return null;
     }
 
     /**
@@ -293,36 +323,31 @@ public class XmlConfiguration extends Log4j1Configuration {
 
         if (appender != null) {
             return appender;
-        } else {
-            // Doesn't work on DOM Level 1 :
-            // Element element = doc.getElementById(appenderName);
-
-            // Endre's hack:
-            Element element = null;
-            NodeList list = doc.getElementsByTagName("appender");
-            for (int t = 0; t < list.getLength(); t++) {
-                Node node = list.item(t);
-                NamedNodeMap map = node.getAttributes();
-                Node attrNode = map.getNamedItem("name");
-                if (appenderName.equals(attrNode.getNodeValue())) {
-                    element = (Element) node;
-                    break;
-                }
-            }
-            // Hack finished.
-
-            if (element == null) {
-
-                LOGGER.error("No appender named [{}] could be found.", appenderName);
-                return null;
-            } else {
-                appender = parseAppender(element);
-                if (appender != null) {
-                    appenderMap.put(appenderName, appender);
-                }
-                return appender;
+        }
+        // Endre's hack:
+        Element element = null;
+        NodeList list = doc.getElementsByTagName("appender");
+        for (int t = 0; t < list.getLength(); t++) {
+            Node node = list.item(t);
+            NamedNodeMap map = node.getAttributes();
+            Node attrNode = map.getNamedItem("name");
+            if (appenderName.equals(attrNode.getNodeValue())) {
+                element = (Element) node;
+                break;
             }
         }
+        // Hack finished.
+
+        if (element == null) {
+
+            LOGGER.error("No appender named [{}] could be found.", appenderName);
+            return null;
+        }
+        appender = parseAppender(element);
+        if (appender != null) {
+            appenderMap.put(appenderName, appender);
+        }
+        return appender;
     }
 
     /**
@@ -353,7 +378,8 @@ public class XmlConfiguration extends Log4j1Configuration {
             PropertySetter propSetter = new PropertySetter(appender);
 
             appender.setName(subst(appenderElement.getAttribute(NAME_ATTR)));
-            forEachElement(appenderElement.getChildNodes(), (currentElement) -> {
+            final AtomicReference<Filter> filterChain = new AtomicReference<>();
+            forEachElement(appenderElement.getChildNodes(), currentElement -> {
                 // Parse appender parameters
                 switch (currentElement.getTagName()) {
                     case PARAM_TAG:
@@ -363,12 +389,7 @@ public class XmlConfiguration extends Log4j1Configuration {
                         appender.setLayout(parseLayout(currentElement));
                         break;
                     case FILTER_TAG:
-                        Filter filter = parseFilters(currentElement);
-                        if (filter != null) {
-                            LOGGER.debug("Adding filter of type [{}] to appender named [{}]",
-                                    filter.getClass(), appender.getName());
-                            appender.addFilter(filter);
-                        }
+                        addFilter(filterChain, currentElement);
                         break;
                     case ERROR_HANDLER_TAG:
                         parseErrorHandler(currentElement, appender);
@@ -382,7 +403,7 @@ public class XmlConfiguration extends Log4j1Configuration {
                                     appender.getName());
                             aa.addAppender(child);
                         } else {
-                            LOGGER.error("Requesting attachment of appender named [{}] to appender named [{}}]"
+                            LOGGER.error("Requesting attachment of appender named [{}] to appender named [{}]"
                                             + "which does not implement org.apache.log4j.spi.AppenderAttachable.",
                                     refName, appender.getName());
                         }
@@ -395,6 +416,10 @@ public class XmlConfiguration extends Log4j1Configuration {
                         }
                 }
             });
+            final Filter head = filterChain.get();
+            if (head != null) {
+                appender.addFilter(head);
+            }
             propSetter.activate();
             return appender;
         } catch (ConsumerException ex) {
@@ -427,7 +452,7 @@ public class XmlConfiguration extends Log4j1Configuration {
             RewritePolicy policy = LoaderUtil.newInstanceOf(className);
             PropertySetter propSetter = new PropertySetter(policy);
 
-            forEachElement(element.getChildNodes(), (currentElement) -> {
+            forEachElement(element.getChildNodes(), currentElement -> {
                 if (currentElement.getTagName().equalsIgnoreCase(PARAM_TAG)) {
                     setParameter(currentElement, propSetter);
                 }
@@ -462,7 +487,7 @@ public class XmlConfiguration extends Log4j1Configuration {
             eh.setAppender(appender);
 
             PropertySetter propSetter = new PropertySetter(eh);
-            forEachElement(element.getChildNodes(), (currentElement) -> {
+            forEachElement(element.getChildNodes(), currentElement -> {
                 String tagName = currentElement.getTagName();
                 if (tagName.equals(PARAM_TAG)) {
                     setParameter(currentElement, propSetter);
@@ -476,23 +501,52 @@ public class XmlConfiguration extends Log4j1Configuration {
     /**
      * Used internally to parse a filter element.
      */
+    public void addFilter(final AtomicReference<Filter> ref, final Element filterElement) {
+        final Filter value = parseFilters(filterElement);
+        ref.accumulateAndGet(value, FilterAdapter::addFilter);
+    }
+
+    /**
+     * Used internally to parse a filter element.
+     */
     public Filter parseFilters(Element filterElement) {
         String className = subst(filterElement.getAttribute(CLASS_ATTR));
         LOGGER.debug("Class name: [" + className + ']');
         Filter filter = manager.parseFilter(className, filterElement, this);
         if (filter == null) {
+            filter = buildFilter(className, filterElement);
+        }
+        return filter;
+    }
+
+    private Filter buildFilter(final String className, final Element filterElement) {
+        try {
+            Filter filter = LoaderUtil.newInstanceOf(className);
             PropertySetter propSetter = new PropertySetter(filter);
-            forEachElement(filterElement.getChildNodes(), (currentElement) -> {
-                String tagName = currentElement.getTagName();
-                if (tagName.equals(PARAM_TAG)) {
-                    setParameter(currentElement, propSetter);
-                } else {
-                    quietParseUnrecognizedElement(filter, currentElement, props);
+
+            forEachElement(filterElement.getChildNodes(), currentElement -> {
+                // Parse appender parameters
+                switch (currentElement.getTagName()) {
+                    case PARAM_TAG :
+                        setParameter(currentElement, propSetter);
+                        break;
                 }
             });
             propSetter.activate();
+            return filter;
+        } catch (ConsumerException ex) {
+            Throwable t = ex.getCause();
+            if (t instanceof InterruptedException || t instanceof InterruptedIOException) {
+                Thread.currentThread().interrupt();
+            }
+            LOGGER.error("Could not create an Filter. Reported error follows.", t);
+        } catch (Exception oops) {
+            if (oops instanceof InterruptedException || oops instanceof InterruptedIOException) {
+                Thread.currentThread().interrupt();
+            }
+            LOGGER.error("Could not create an Filter. Reported error follows.", oops);
         }
-        return filter;
+        return null;
     }
 
     /**
@@ -527,7 +581,7 @@ public class XmlConfiguration extends Log4j1Configuration {
 
         final PropertySetter propSetter = new PropertySetter(loggerConfig);
         loggerConfig.getAppenderRefs().clear();
-        forEachElement(catElement.getChildNodes(), (currentElement) -> {
+        forEachElement(catElement.getChildNodes(), currentElement -> {
             switch (currentElement.getTagName()) {
                 case APPENDER_REF_TAG: {
                     Appender appender = findAppenderByReference(currentElement);
@@ -537,7 +591,7 @@ public class XmlConfiguration extends Log4j1Configuration {
                                 loggerConfig.getName());
                         loggerConfig.addAppender(getAppender(refName), null, null);
                     } else {
-                        LOGGER.debug("Appender named [{}}] not found.", refName);
+                        LOGGER.debug("Appender named [{}] not found.", refName);
                     }
                     break;
                 }
@@ -574,7 +628,7 @@ public class XmlConfiguration extends Log4j1Configuration {
         try {
             Layout layout = LoaderUtil.newInstanceOf(className);
             PropertySetter propSetter = new PropertySetter(layout);
-            forEachElement(layout_element.getChildNodes(), (currentElement) -> {
+            forEachElement(layout_element.getChildNodes(), currentElement -> {
                 String tagName = currentElement.getTagName();
                 if (tagName.equals(PARAM_TAG)) {
                     setParameter(currentElement, propSetter);
@@ -589,19 +643,23 @@ public class XmlConfiguration extends Log4j1Configuration {
 
             propSetter.activate();
             return layout;
-        } catch (ConsumerException ce) {
-            Throwable cause = ce.getCause();
-            if (cause instanceof InterruptedException || cause instanceof InterruptedIOException) {
+        } catch (Exception e) {
+            Throwable cause = e.getCause();
+            if (e instanceof InterruptedException 
+                || e instanceof InterruptedIOException 
+                || cause instanceof InterruptedException
+                || cause instanceof InterruptedIOException) {
                 Thread.currentThread().interrupt();
             }
-            LOGGER.error("Could not create the Layout. Reported error follows.", cause);
-        } catch (Exception oops) {
-            if (oops instanceof InterruptedException || oops instanceof InterruptedIOException) {
-                Thread.currentThread().interrupt();
-            }
-            LOGGER.error("Could not create the Layout. Reported error follows.", oops);
+            LOGGER.error("Could not create the Layout. Reported error follows.", e);
         }
         return null;
+    }
+
+    public TriggeringPolicy parseTriggeringPolicy(Element policyElement) {
+        String className = subst(policyElement.getAttribute(CLASS_ATTR));
+        LOGGER.debug("Parsing triggering policy of class: \"{}\"", className);
+        return manager.parseTriggeringPolicy(className, policyElement, this);
     }
 
     /**
@@ -614,7 +672,7 @@ public class XmlConfiguration extends Log4j1Configuration {
         }
 
         String priStr = subst(element.getAttribute(VALUE_ATTR));
-        LOGGER.debug("Level value for {} is [{}}].", catName, priStr);
+        LOGGER.debug("Level value for {} is [{}].", catName, priStr);
 
         if (INHERITED.equalsIgnoreCase(priStr) || NULL.equalsIgnoreCase(priStr)) {
             if (isRoot) {
@@ -624,31 +682,20 @@ public class XmlConfiguration extends Log4j1Configuration {
             }
         } else {
             String className = subst(element.getAttribute(CLASS_ATTR));
+            final Level level;
             if (EMPTY_STR.equals(className)) {
-                logger.setLevel(OptionConverter.convertLevel(priStr, org.apache.logging.log4j.Level.DEBUG));
+                level = OptionConverter.toLevel(priStr, DEFAULT_LEVEL);
             } else {
-                LOGGER.debug("Desired Level sub-class: [{}]", className);
-                try {
-                    Class<?> clazz = LoaderUtil.loadClass(className);
-                    Method toLevelMethod = clazz.getMethod("toLevel", ONE_STRING_PARAM);
-                    Level pri = (Level) toLevelMethod.invoke(null, new Object[]{priStr});
-                    logger.setLevel(OptionConverter.convertLevel(pri));
-                } catch (Exception oops) {
-                    if (oops instanceof InterruptedException || oops instanceof InterruptedIOException) {
-                        Thread.currentThread().interrupt();
-                    }
-                    LOGGER.error("Could not create level [" + priStr +
-                            "]. Reported error follows.", oops);
-                    return;
-                }
+                level = OptionConverter.toLevel(className, priStr, DEFAULT_LEVEL);
             }
+            logger.setLevel(level != null ? level.getVersion2Level() : null);
         }
         LOGGER.debug("{} level set to {}", catName,  logger.getLevel());
     }
 
-    private void setParameter(Element elem, PropertySetter propSetter) {
-        String name = subst(elem.getAttribute(NAME_ATTR));
-        String value = (elem.getAttribute(VALUE_ATTR));
+    private void setParameter(Element element, PropertySetter propSetter) {
+        String name = subst(element.getAttribute(NAME_ATTR));
+        String value = element.getAttribute(VALUE_ATTR);
         value = subst(OptionConverter.convertSpecialChars(value));
         propSetter.setProperty(name, value);
     }
@@ -663,8 +710,7 @@ public class XmlConfiguration extends Log4j1Configuration {
 
         if (!rootElementName.equals(CONFIGURATION_TAG)) {
             if (rootElementName.equals(OLD_CONFIGURATION_TAG)) {
-                LOGGER.warn("The <" + OLD_CONFIGURATION_TAG +
-                        "> element has been deprecated.");
+                LOGGER.warn("The <" + OLD_CONFIGURATION_TAG + "> element has been deprecated.");
                 LOGGER.warn("Use the <" + CONFIGURATION_TAG + "> element instead.");
             } else {
                 LOGGER.error("DOM element is - not a <" + CONFIGURATION_TAG + "> element.");
@@ -681,7 +727,6 @@ public class XmlConfiguration extends Log4j1Configuration {
         String status = "error";
         if (!debugAttrib.equals("") && !debugAttrib.equals("null")) {
             status = OptionConverter.toBoolean(debugAttrib, true) ? "debug" : "error";
-
         } else {
             LOGGER.debug("Ignoring " + INTERNAL_DEBUG_ATTR + " attribute.");
         }
@@ -696,31 +741,36 @@ public class XmlConfiguration extends Log4j1Configuration {
         final StatusConfiguration statusConfig = new StatusConfiguration().withStatus(status);
         statusConfig.initialize();
 
-        forEachElement(element.getChildNodes(), (currentElement) -> {
+        final String threshold = subst(element.getAttribute(THRESHOLD_ATTR));
+        if (threshold != null) {
+            final org.apache.logging.log4j.Level level = OptionConverter.convertLevel(threshold.trim(),
+                    org.apache.logging.log4j.Level.ALL);
+            addFilter(ThresholdFilter.createFilter(level, Result.NEUTRAL, Result.DENY));
+        }
+
+        forEachElement(element.getChildNodes(), currentElement -> {
             switch (currentElement.getTagName()) {
-                case CATEGORY: case LOGGER_ELEMENT:
+                case CATEGORY: 
+                case LOGGER_ELEMENT:
                     parseCategory(currentElement);
                     break;
                 case ROOT_TAG:
                     parseRoot(currentElement);
                     break;
                 case RENDERER_TAG:
-                    LOGGER.warn("Renderers are not supported by Log4j 2 and will be ignored.");
+                    LOGGER.warn("Log4j 1 renderers are not supported by Log4j 2 and will be ignored.");
                     break;
                 case THROWABLE_RENDERER_TAG:
-                    LOGGER.warn("Throwable Renderers are not supported by Log4j 2 and will be ignored.");
+                    LOGGER.warn("Log4j 1 throwable renderers are not supported by Log4j 2 and will be ignored.");
                     break;
-                case CATEGORY_FACTORY_TAG: case LOGGER_FACTORY_TAG:
-                    LOGGER.warn("Log4j 1 Logger factories are not supported by Log4j 2 and will be ignored.");
+                case CATEGORY_FACTORY_TAG: 
+                case LOGGER_FACTORY_TAG:
+                    LOGGER.warn("Log4j 1 logger factories are not supported by Log4j 2 and will be ignored.");
                     break;
                 case APPENDER_TAG:
                     Appender appender = parseAppender(currentElement);
                     appenderMap.put(appender.getName(), appender);
-                    if (appender instanceof AppenderWrapper) {
-                        addAppender(((AppenderWrapper) appender).getAppender());
-                    } else {
-                        addAppender(new AppenderAdapter(appender).getAdapter());
-                    }
+                    addAppender(AppenderAdapter.adapt(appender));
                     break;
                 default:
                     quietParseUnrecognizedElement(null, currentElement, props);
@@ -733,15 +783,9 @@ public class XmlConfiguration extends Log4j1Configuration {
     }
 
     public static void forEachElement(NodeList list, Consumer<Element> consumer) {
-        final int length = list.getLength();
-        for (int loop = 0; loop < length; loop++) {
-            Node currentNode = list.item(loop);
-
-            if (currentNode.getNodeType() == Node.ELEMENT_NODE) {
-                Element currentElement = (Element) currentNode;
-                consumer.accept(currentElement);
-            }
-        }
+        IntStream.range(0, list.getLength()).mapToObj(list::item)
+            .filter(node -> node.getNodeType() == Node.ELEMENT_NODE)
+            .forEach(node -> consumer.accept((Element) node));
     }
 
     private interface ParseAction {
@@ -751,14 +795,17 @@ public class XmlConfiguration extends Log4j1Configuration {
     private static class SAXErrorHandler implements org.xml.sax.ErrorHandler {
         private static final org.apache.logging.log4j.Logger LOGGER = StatusLogger.getLogger();
 
+        @Override
         public void error(final SAXParseException ex) {
             emitMessage("Continuable parsing error ", ex);
         }
 
+        @Override
         public void fatalError(final SAXParseException ex) {
             emitMessage("Fatal parsing error ", ex);
         }
 
+        @Override
         public void warning(final SAXParseException ex) {
             emitMessage("Parsing warning ", ex);
         }

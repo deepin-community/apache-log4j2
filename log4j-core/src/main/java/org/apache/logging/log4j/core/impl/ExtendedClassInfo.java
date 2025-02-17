@@ -17,6 +17,7 @@
 package org.apache.logging.log4j.core.impl;
 
 import java.io.Serializable;
+import java.util.Objects;
 
 import org.apache.logging.log4j.core.pattern.PlainTextRenderer;
 import org.apache.logging.log4j.core.pattern.TextRenderer;
@@ -42,7 +43,6 @@ public final class ExtendedClassInfo implements Serializable {
      * @param version
      */
     public ExtendedClassInfo(final boolean exact, final String location, final String version) {
-        super();
         this.exact = exact;
         this.location = location;
         this.version = version;
@@ -63,18 +63,10 @@ public final class ExtendedClassInfo implements Serializable {
         if (this.exact != other.exact) {
             return false;
         }
-        if (this.location == null) {
-            if (other.location != null) {
-                return false;
-            }
-        } else if (!this.location.equals(other.location)) {
+        if (!Objects.equals(this.location, other.location)) {
             return false;
         }
-        if (this.version == null) {
-            if (other.version != null) {
-                return false;
-            }
-        } else if (!this.version.equals(other.version)) {
+        if (!Objects.equals(this.version, other.version)) {
             return false;
         }
         return true;
@@ -94,12 +86,7 @@ public final class ExtendedClassInfo implements Serializable {
 
     @Override
     public int hashCode() {
-        final int prime = 31;
-        int result = 1;
-        result = prime * result + (this.exact ? 1231 : 1237);
-        result = prime * result + ((this.location == null) ? 0 : this.location.hashCode());
-        result = prime * result + ((this.version == null) ? 0 : this.version.hashCode());
-        return result;
+        return Objects.hash(exact, location, version);
     }
 
     public void renderOn(final StringBuilder output, final TextRenderer textRenderer) {

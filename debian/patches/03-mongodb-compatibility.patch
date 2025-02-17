@@ -1,12 +1,18 @@
-Description: Fixes the compatibility with the version of the MongoDB driver in Debian
-Author: Emmanuel Bourg <ebourg@apache.org>
+From: Markus Koschany <apo@debian.org>
+Date: Sat, 11 Dec 2021 15:13:09 +0100
+Subject: 03-mongodb-compatibility
+
 Forwarded: not-needed
+---
+ .../main/java/org/apache/logging/log4j/mongodb3/MongoDbProvider.java    | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
 --- a/log4j-mongodb3/src/main/java/org/apache/logging/log4j/mongodb3/MongoDbProvider.java
 +++ b/log4j-mongodb3/src/main/java/org/apache/logging/log4j/mongodb3/MongoDbProvider.java
-@@ -172,7 +172,7 @@
+@@ -179,7 +179,7 @@
+                 description = "database=" + databaseName;
                  if (Strings.isNotEmpty(userName) && Strings.isNotEmpty(password)) {
-                     description += ", username=" + userName + ", passwordHash="
-                             + NameUtil.md5(password + MongoDbProvider.class.getName());
+                     description += ", username=" + userName;
 -                    mongoCredential = MongoCredential.createCredential(userName, databaseName, password.toCharArray());
 +                    mongoCredential = MongoCredential.createMongoCRCredential(userName, databaseName, password.toCharArray());
                  }

@@ -16,32 +16,23 @@
  */
 package org.apache.logging.log4j.core.util;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
 
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.MethodSource;
 
-import static org.junit.Assert.*;
-
-/**
- *
- */
-@RunWith(Parameterized.class)
 public class AssertTest {
 
-    private final Object value;
-    private final boolean isEmpty;
-
-    @Parameterized.Parameters
     public static Object[][] data() {
         return new Object[][]{
             // value, isEmpty
             {null, true},
             {"", true},
-            {new Object[0], true},
+            {org.apache.logging.log4j.util.Constants.EMPTY_OBJECT_ARRAY, true},
             {new ArrayList<>(), true},
             {new HashMap<>(), true},
             {0, false},
@@ -55,13 +46,9 @@ public class AssertTest {
         };
     }
 
-    public AssertTest(final Object value, final boolean isEmpty) {
-        this.value = value;
-        this.isEmpty = isEmpty;
-    }
-
-    @Test
-    public void isEmpty() throws Exception {
+    @ParameterizedTest
+    @MethodSource("data")
+    public void isEmpty(Object value, boolean isEmpty) throws Exception {
         assertEquals(isEmpty, Assert.isEmpty(value));
     }
 

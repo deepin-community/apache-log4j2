@@ -22,6 +22,7 @@ import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.mock;
 
 import java.io.ByteArrayOutputStream;
+import java.io.IOException;
 import java.io.PrintWriter;
 import java.sql.Connection;
 import java.sql.ResultSet;
@@ -39,16 +40,15 @@ import org.apache.logging.log4j.junit.JndiRule;
 import org.apache.logging.log4j.junit.LoggerContextRule;
 import org.apache.logging.log4j.message.MapMessage;
 import org.junit.Assert;
+import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.RuleChain;
-import org.mockito.invocation.InvocationOnMock;
-import org.mockito.stubbing.Answer;
 
 /**
  * Unit tests {@link MapMessage}s for JdbcAppender using a {@link DataSource} configuration.
  */
-public class JdbcAppenderMapMessageDataSourceTest {
+public class JdbcAppenderMapMessageDataSourceTest extends AbstractJdbcDataSourceTest {
 
     @Rule
     public final RuleChain rules;
@@ -57,8 +57,8 @@ public class JdbcAppenderMapMessageDataSourceTest {
     public JdbcAppenderMapMessageDataSourceTest() {
         this(new JdbcRule(JdbcH2TestHelper.TEST_CONFIGURATION_SOURCE_MEM,
         // @formatter:off
-                "CREATE TABLE dsLogEntry (Id INTEGER IDENTITY, ColumnA VARCHAR(255), ColumnB VARCHAR(255))",
-                "DROP TABLE dsLogEntry"));
+                "CREATE TABLE dsLogEntry (Id INTEGER, ColumnA VARCHAR(255), ColumnB VARCHAR(255))",
+                "DROP TABLE IF EXISTS dsLogEntry"));
         // @formatter:on
     }
 
@@ -72,15 +72,20 @@ public class JdbcAppenderMapMessageDataSourceTest {
         this.jdbcRule = jdbcRule;
     }
 
+    @Before
+    public void afterEachDeleteDir() throws IOException {
+        JdbcH2TestHelper.deleteDir();
+    }
+
+    @Before
+    public void beforeEachDeleteDir() throws IOException {
+        JdbcH2TestHelper.deleteDir();
+    }
+
     private DataSource createMockDataSource() {
         try {
             final DataSource dataSource = mock(DataSource.class);
-            given(dataSource.getConnection()).willAnswer(new Answer<Connection>() {
-                @Override
-                public Connection answer(final InvocationOnMock invocation) throws Throwable {
-                    return jdbcRule.getConnectionSource().getConnection();
-                }
-            });
+            given(dataSource.getConnection()).willAnswer(invocation -> jdbcRule.getConnectionSource().getConnection());
             return dataSource;
         } catch (final SQLException e) {
             Throwables.rethrow(e);

@@ -49,16 +49,16 @@ import org.openjdk.jmh.annotations.State;
 @State(Scope.Benchmark)
 public class TimeFormatBenchmark {
 
-    ThreadLocal<SimpleDateFormat> threadLocalSimpleDateFormat = new ThreadLocal<SimpleDateFormat>() {
+    ThreadLocal<SimpleDateFormat> threadLocalSimpleDateFormat = new ThreadLocal<>() {
         @Override
         protected SimpleDateFormat initialValue() {
             return new SimpleDateFormat("HH:mm:ss.SSS");
         }
     };
     FastDateFormat fastDateFormat = FastDateFormat.getInstance("HH:mm:ss.SSS");
-    FixedDateFormat fixedDateFormat = FixedDateFormat.createIfSupported(new String[]{"ABSOLUTE"});
-    volatile long midnightToday = 0;
-    volatile long midnightTomorrow = 0;
+    FixedDateFormat fixedDateFormat = FixedDateFormat.createIfSupported("ABSOLUTE");
+    volatile long midnightToday;
+    volatile long midnightTomorrow;
 
     @State(Scope.Thread)
     public static class BufferState {

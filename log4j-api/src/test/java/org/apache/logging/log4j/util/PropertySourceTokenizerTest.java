@@ -16,28 +16,17 @@
  */
 package org.apache.logging.log4j.util;
 
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.MethodSource;
+
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
-import static org.junit.Assert.assertEquals;
-
-@RunWith(Parameterized.class)
 public class PropertySourceTokenizerTest {
 
-    private final CharSequence value;
-    private final List<CharSequence> expectedTokens;
-
-    public PropertySourceTokenizerTest(final CharSequence value, final List<CharSequence> expectedTokens) {
-        this.value = value;
-        this.expectedTokens = expectedTokens;
-    }
-
-    @Parameterized.Parameters(name = "{0}")
     public static Object[][] data() {
         return new Object[][]{
             {"log4j.simple", Collections.singletonList("simple")},
@@ -55,12 +44,17 @@ public class PropertySourceTokenizerTest {
             {"log4j2-dashed-propertyName", Arrays.asList("dashed", "property", "name")},
             {"Log4jProperty_with.all-the/separators", Arrays.asList("property", "with", "all", "the", "separators")},
             {"org.apache.logging.log4j.config.property", Arrays.asList("config", "property")},
+            // LOG4J2-3413
+            {"level", Collections.emptyList()},
+            {"user.home", Collections.emptyList()},
+            {"CATALINA_BASE", Collections.emptyList()}
         };
     }
 
-    @Test
-    public void testTokenize() throws Exception {
-        final List<CharSequence> tokens = PropertySource.Util.tokenize(value);
+    @ParameterizedTest
+    @MethodSource("data")
+    public void testTokenize(final CharSequence value, final List<CharSequence> expectedTokens) {
+        List<CharSequence> tokens = PropertySource.Util.tokenize(value);
         assertEquals(expectedTokens, tokens);
     }
 }

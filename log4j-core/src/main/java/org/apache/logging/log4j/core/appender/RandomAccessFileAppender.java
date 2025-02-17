@@ -62,16 +62,20 @@ public final class RandomAccessFileAppender extends AbstractOutputStreamAppender
         @PluginBuilderAttribute("advertiseURI")
         private String advertiseURI;
 
+        public Builder() {
+            this.withBufferSize(RandomAccessFileManager.DEFAULT_BUFFER_SIZE);
+        }
+
         @Override
         public RandomAccessFileAppender build() {
             final String name = getName();
             if (name == null) {
-                LOGGER.error("No name provided for FileAppender");
+                LOGGER.error("No name provided for RandomAccessFileAppender");
                 return null;
             }
 
             if (fileName == null) {
-                LOGGER.error("No filename provided for FileAppender with name " + name);
+                LOGGER.error("No filename provided for RandomAccessFileAppender with name {}", name);
                 return null;
             }
             final Layout<? extends Serializable> layout = getOrCreateLayout();
@@ -139,26 +143,6 @@ public final class RandomAccessFileAppender extends AbstractOutputStreamAppender
         }
         setStopped();
         return true;
-    }
-
-    /**
-     * Write the log entry rolling over the file when required.
-     *
-     * @param event The LogEvent.
-     */
-    @Override
-    public void append(final LogEvent event) {
-
-        // Leverage the nice batching behaviour of async Loggers/Appenders:
-        // we can signal the file manager that it needs to flush the buffer
-        // to disk at the end of a batch.
-        // From a user's point of view, this means that all log events are
-        // _always_ available in the log file, without incurring the overhead
-        // of immediateFlush=true.
-        getManager().setEndOfBatch(event.isEndOfBatch()); // FIXME manager's EndOfBatch threadlocal can be deleted
-
-        // LOG4J2-1292 utilize gc-free Layout.encode() method: taken care of in superclass
-        super.append(event);
     }
 
     /**

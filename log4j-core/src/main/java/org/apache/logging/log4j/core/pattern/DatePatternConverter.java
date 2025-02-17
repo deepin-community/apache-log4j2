@@ -18,6 +18,7 @@ package org.apache.logging.log4j.core.pattern;
 
 import java.util.Arrays;
 import java.util.Date;
+import java.util.Locale;
 import java.util.Objects;
 import java.util.TimeZone;
 import java.util.concurrent.atomic.AtomicReference;
@@ -104,7 +105,7 @@ public final class DatePatternConverter extends LogEventPatternConverter impleme
         void formatToBuffer(final Instant instant, final StringBuilder destination) {
             final long epochSecond = instant.getEpochSecond();
             final int nanoOfSecond = instant.getNanoOfSecond();
-            if (previousTime != epochSecond || nanos != nanoOfSecond) {
+            if (!fixedDateFormat.isEquivalent(previousTime, nanos, epochSecond, nanoOfSecond)) {
                 length = fixedDateFormat.formatInstant(instant, cachedBuffer, 0);
                 previousTime = epochSecond;
                 nanos = nanoOfSecond;
@@ -236,8 +237,13 @@ public final class DatePatternConverter extends LogEventPatternConverter impleme
             tz = TimeZone.getTimeZone(options[1]);
         }
 
+        Locale locale = null;
+        if (options.length > 2 && options[2] != null) {
+            locale = Locale.forLanguageTag(options[2]);
+        }
+
         try {
-            final FastDateFormat tempFormat = FastDateFormat.getInstance(pattern, tz);
+            final FastDateFormat tempFormat = FastDateFormat.getInstance(pattern, tz, locale);
             return new PatternFormatter(tempFormat);
         } catch (final IllegalArgumentException e) {
             LOGGER.warn("Could not instantiate FastDateFormat with pattern " + pattern, e);

@@ -65,7 +65,7 @@ public class HttpURLConnectionManager extends HttpManager {
         this.method = Objects.requireNonNull(method, "method");
         this.connectTimeoutMillis = connectTimeoutMillis;
         this.readTimeoutMillis = readTimeoutMillis;
-        this.headers = headers != null ? headers : new Property[0];
+        this.headers = headers != null ? headers : Property.EMPTY_ARRAY;
         this.sslConfiguration = sslConfiguration;
         if (this.sslConfiguration != null && !isHttps) {
             throw new ConfigurationException("SSL configuration can only be specified with URL scheme https");
@@ -75,7 +75,7 @@ public class HttpURLConnectionManager extends HttpManager {
 
     @Override
     public void send(final Layout<?> layout, final LogEvent event) throws IOException {
-        final HttpURLConnection urlConnection = (HttpURLConnection)url.openConnection();
+        final HttpURLConnection urlConnection = (HttpURLConnection) url.openConnection();
         urlConnection.setAllowUserInteraction(false);
         urlConnection.setDoOutput(true);
         urlConnection.setDoInput(true);
@@ -90,15 +90,13 @@ public class HttpURLConnectionManager extends HttpManager {
             urlConnection.setRequestProperty("Content-Type", layout.getContentType());
         }
         for (final Property header : headers) {
-            urlConnection.setRequestProperty(
-                header.getName(),
-                header.isValueNeedsLookup() ? getConfiguration().getStrSubstitutor().replace(event, header.getValue()) : header.getValue());
+            urlConnection.setRequestProperty(header.getName(), header.evaluate(getConfiguration().getStrSubstitutor()));
         }
         if (sslConfiguration != null) {
-            ((HttpsURLConnection)urlConnection).setSSLSocketFactory(sslConfiguration.getSslSocketFactory());
+            ((HttpsURLConnection) urlConnection).setSSLSocketFactory(sslConfiguration.getSslSocketFactory());
         }
         if (isHttps && !verifyHostname) {
-            ((HttpsURLConnection)urlConnection).setHostnameVerifier(LaxHostnameVerifier.INSTANCE);
+            ((HttpsURLConnection) urlConnection).setHostnameVerifier(LaxHostnameVerifier.INSTANCE);
         }
 
         final byte[] msg = layout.toByteArray(event);

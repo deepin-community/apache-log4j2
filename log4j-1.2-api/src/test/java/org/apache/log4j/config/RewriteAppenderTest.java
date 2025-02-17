@@ -16,6 +16,13 @@
  */
 package org.apache.log4j.config;
 
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertTrue;
+
+import java.util.List;
+import java.util.Map;
+
 import org.apache.log4j.ListAppender;
 import org.apache.log4j.LogManager;
 import org.apache.log4j.Logger;
@@ -29,13 +36,6 @@ import org.apache.logging.log4j.core.config.ConfigurationFactory;
 import org.junit.After;
 import org.junit.BeforeClass;
 import org.junit.Test;
-
-import java.util.List;
-import java.util.Map;
-
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertTrue;
 
 /**
  * Test RewriteAppender
@@ -53,10 +53,11 @@ public class RewriteAppenderTest {
     }
 
     @Test
-    public void testRewrite() throws Exception {
+    public void testRewrite() {
         Logger logger = LogManager.getLogger("test");
         ThreadContext.put("key1", "This is a test");
         ThreadContext.put("hello", "world");
+        long logTime = System.currentTimeMillis();
         logger.debug("Say hello");
         LoggerContext context = (LoggerContext) org.apache.logging.log4j.LogManager.getContext(false);
         Configuration configuration = context.getConfiguration();
@@ -73,5 +74,6 @@ public class RewriteAppenderTest {
         assertNotNull("No properties in the event", events.get(0).getProperties());
         assertTrue("Key was not inserted", events.get(0).getProperties().containsKey("key2"));
         assertEquals("Key value is incorrect", "Log4j", events.get(0).getProperties().get("key2"));
+        assertTrue("Timestamp is before point of logging", events.get(0).getTimeStamp() >= logTime);
     }
 }

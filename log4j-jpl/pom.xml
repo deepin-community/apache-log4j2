@@ -20,14 +20,14 @@
   <parent>
     <artifactId>log4j</artifactId>
     <groupId>org.apache.logging.log4j</groupId>
-    <version>2.13.3</version>
-    <relativePath>../</relativePath>
+    <version>2.19.0</version>
   </parent>
   <modelVersion>4.0.0</modelVersion>
 
   <properties>
     <log4jParentDir>${basedir}/..</log4jParentDir>
     <module.name>org.apache.logging.log4j.jpl</module.name>
+    <maven.doap.skip>true</maven.doap.skip>
   </properties>
 
   <artifactId>log4j-jpl</artifactId>
@@ -52,12 +52,17 @@
     </dependency>
     <dependency>
       <groupId>org.hamcrest</groupId>
-      <artifactId>hamcrest-all</artifactId>
+      <artifactId>hamcrest</artifactId>
       <scope>test</scope>
     </dependency>
     <dependency>
-      <groupId>junit</groupId>
-      <artifactId>junit</artifactId>
+      <groupId>org.junit.vintage</groupId>
+      <artifactId>junit-vintage-engine</artifactId>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.junit.jupiter</groupId>
+      <artifactId>junit-jupiter-engine</artifactId>
       <scope>test</scope>
     </dependency>
   </dependencies>
@@ -92,7 +97,7 @@
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-toolchains-plugin</artifactId>
-        <version>1.1</version>
+        <version>3.0.0</version>
         <executions>
           <execution>
             <goals>
@@ -139,7 +144,7 @@
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-surefire-plugin</artifactId>
-        <!-- Do not upgrade until https://issues.apache.org/jira/browse/SUREFIRE-720 is fixed -->
+        <!-- Do not upgrade until https://issues.apache.org/jira/browse/SUREFIRE-2073 is fixed -->
         <version>2.13</version>
         <configuration>
           <excludes combine.self="override" />
@@ -260,18 +265,6 @@
       </build>
       <reporting>
         <plugins>
-          <plugin>
-            <!-- spotbugs is not compatible with toolchain and needs same JDK than one use to compile -->
-            <groupId>com.github.spotbugs</groupId>
-            <artifactId>spotbugs-maven-plugin</artifactId>
-            <configuration>
-              <fork>true</fork>
-              <jvmArgs>-Duser.language=en</jvmArgs>
-              <threshold>Normal</threshold>
-              <effort>Default</effort>
-              <excludeFilterFile>${log4jParentDir}/spotbugs-exclude-filter.xml</excludeFilterFile>
-            </configuration>
-          </plugin>
           <plugin>
             <!-- pmd is not compatible with toolchain and needs same JDK than one use to compile -->
             <groupId>org.apache.maven.plugins</groupId>

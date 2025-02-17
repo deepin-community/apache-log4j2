@@ -37,6 +37,7 @@ import org.apache.logging.log4j.core.Layout;
 import org.apache.logging.log4j.core.util.Closer;
 import org.apache.logging.log4j.core.util.FileUtils;
 import org.apache.logging.log4j.core.util.NullOutputStream;
+import org.apache.logging.log4j.util.Constants;
 
 //Lines too long...
 //CHECKSTYLE:OFF
@@ -69,19 +70,17 @@ public class MemoryMappedFileManager extends OutputStreamManager {
     private final int regionLength;
     private final String advertiseURI;
     private final RandomAccessFile randomAccessFile;
-    private final ThreadLocal<Boolean> isEndOfBatch = new ThreadLocal<>();
     private MappedByteBuffer mappedBuffer;
     private long mappingOffset;
 
     protected MemoryMappedFileManager(final RandomAccessFile file, final String fileName, final OutputStream os,
             final boolean immediateFlush, final long position, final int regionLength, final String advertiseURI,
             final Layout<? extends Serializable> layout, final boolean writeHeader) throws IOException {
-        super(os, fileName, layout, writeHeader, ByteBuffer.wrap(new byte[0]));
+        super(os, fileName, layout, writeHeader, ByteBuffer.wrap(Constants.EMPTY_BYTE_ARRAY));
         this.immediateFlush = immediateFlush;
         this.randomAccessFile = Objects.requireNonNull(file, "RandomAccessFile");
         this.regionLength = regionLength;
         this.advertiseURI = advertiseURI;
-        this.isEndOfBatch.set(Boolean.FALSE);
         this.mappedBuffer = mmap(randomAccessFile.getChannel(), getFileName(), position, regionLength);
         this.byteBuffer = mappedBuffer;
         this.mappingOffset = position;
@@ -105,12 +104,23 @@ public class MemoryMappedFileManager extends OutputStreamManager {
                 regionLength, advertiseURI, layout), FACTORY));
     }
 
+    /**
+     * No longer used, the {@link org.apache.logging.log4j.core.LogEvent#isEndOfBatch()} attribute is used instead.
+     * @return {@link Boolean#FALSE}.
+     * @deprecated end-of-batch on the event is used instead.
+     */
+    @Deprecated
     public Boolean isEndOfBatch() {
-        return isEndOfBatch.get();
+        return Boolean.FALSE;
     }
 
-    public void setEndOfBatch(final boolean endOfBatch) {
-        this.isEndOfBatch.set(Boolean.valueOf(endOfBatch));
+    /**
+     * No longer used, the {@link org.apache.logging.log4j.core.LogEvent#isEndOfBatch()} attribute is used instead.
+     * This method is a no-op.
+     * @deprecated end-of-batch on the event is used instead.
+     */
+    @Deprecated
+    public void setEndOfBatch(@SuppressWarnings("unused") final boolean endOfBatch) {
     }
 
     @Override
@@ -213,16 +223,13 @@ public class MemoryMappedFileManager extends OutputStreamManager {
     private static void unsafeUnmap(final MappedByteBuffer mbb) throws PrivilegedActionException {
         LOGGER.debug("MMapAppender unmapping old buffer...");
         final long startNanos = System.nanoTime();
-        AccessController.doPrivileged(new PrivilegedExceptionAction<Object>() {
-            @Override
-            public Object run() throws Exception {
-                final Method getCleanerMethod = mbb.getClass().getMethod("cleaner");
-                getCleanerMethod.setAccessible(true);
-                final Object cleaner = getCleanerMethod.invoke(mbb); // sun.misc.Cleaner instance
-                final Method cleanMethod = cleaner.getClass().getMethod("clean");
-                cleanMethod.invoke(cleaner);
-                return null;
-            }
+        AccessController.doPrivileged((PrivilegedExceptionAction<Object>) () -> {
+            final Method getCleanerMethod = mbb.getClass().getMethod("cleaner");
+            getCleanerMethod.setAccessible(true);
+            final Object cleaner = getCleanerMethod.invoke(mbb); // sun.misc.Cleaner instance
+            final Method cleanMethod = cleaner.getClass().getMethod("clean");
+            cleanMethod.invoke(cleaner);
+            return null;
         });
         final float millis = (float) ((System.nanoTime() - startNanos) / NANOS_PER_MILLISEC);
         LOGGER.debug("MMapAppender unmapped buffer OK in {} millis", millis);

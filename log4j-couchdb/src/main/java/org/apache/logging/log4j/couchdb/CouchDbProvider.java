@@ -16,22 +16,21 @@
  */
 package org.apache.logging.log4j.couchdb;
 
-import java.lang.reflect.Method;
-
 import org.apache.logging.log4j.Logger;
+import org.apache.logging.log4j.core.appender.nosql.NoSqlProvider;
 import org.apache.logging.log4j.core.config.plugins.Plugin;
 import org.apache.logging.log4j.core.config.plugins.PluginAttribute;
 import org.apache.logging.log4j.core.config.plugins.PluginFactory;
 import org.apache.logging.log4j.core.config.plugins.convert.TypeConverters;
 import org.apache.logging.log4j.core.config.plugins.validation.constraints.ValidHost;
 import org.apache.logging.log4j.core.config.plugins.validation.constraints.ValidPort;
-import org.apache.logging.log4j.core.util.NameUtil;
-import org.apache.logging.log4j.core.appender.nosql.NoSqlProvider;
 import org.apache.logging.log4j.status.StatusLogger;
 import org.apache.logging.log4j.util.LoaderUtil;
 import org.apache.logging.log4j.util.Strings;
 import org.lightcouch.CouchDbClient;
 import org.lightcouch.CouchDbProperties;
+
+import java.lang.reflect.Method;
 
 /**
  * The Apache CouchDB implementation of {@link NoSqlProvider}.
@@ -106,15 +105,15 @@ public final class CouchDbProvider implements NoSqlProvider<CouchDbConnection> {
                     final CouchDbProperties properties = (CouchDbProperties) object;
                     client = new CouchDbClient(properties);
                     description = "uri=" + client.getDBUri() + ", username=" + properties.getUsername()
-                            + ", passwordHash=" + NameUtil.md5(password + CouchDbProvider.class.getName())
                             + ", maxConnections=" + properties.getMaxConnections() + ", connectionTimeout="
                             + properties.getConnectionTimeout() + ", socketTimeout=" + properties.getSocketTimeout();
-                } else if (object == null) {
-                    LOGGER.error("The factory method [{}.{}()] returned null.", factoryClassName, factoryMethodName);
-                    return null;
                 } else {
-                    LOGGER.error("The factory method [{}.{}()] returned an unsupported type [{}].", factoryClassName,
-                            factoryMethodName, object.getClass().getName());
+                    if (object == null) {
+                        LOGGER.error("The factory method [{}.{}()] returned null.", factoryClassName, factoryMethodName);
+                    } else {
+                        LOGGER.error("The factory method [{}.{}()] returned an unsupported type [{}].", factoryClassName,
+                                factoryMethodName, object.getClass().getName());
+                    }
                     return null;
                 }
             } catch (final ClassNotFoundException e) {
@@ -149,8 +148,7 @@ public final class CouchDbProvider implements NoSqlProvider<CouchDbConnection> {
             }
 
             client = new CouchDbClient(databaseName, false, protocol, server, portInt, username, password);
-            description = "uri=" + client.getDBUri() + ", username=" + username + ", passwordHash="
-                    + NameUtil.md5(password + CouchDbProvider.class.getName());
+            description = "uri=" + client.getDBUri() + ", username=" + username;
         } else {
             LOGGER.error("No factory method was provided so the database name is required.");
             return null;

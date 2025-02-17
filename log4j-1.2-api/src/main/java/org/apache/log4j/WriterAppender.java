@@ -17,16 +17,16 @@
 
 package org.apache.log4j;
 
-import org.apache.log4j.helpers.QuietWriter;
-import org.apache.log4j.spi.ErrorHandler;
-import org.apache.log4j.spi.LoggingEvent;
-import org.apache.logging.log4j.status.StatusLogger;
-
 import java.io.IOException;
 import java.io.InterruptedIOException;
 import java.io.OutputStream;
 import java.io.OutputStreamWriter;
 import java.io.Writer;
+
+import org.apache.log4j.helpers.QuietWriter;
+import org.apache.log4j.spi.ErrorHandler;
+import org.apache.log4j.spi.LoggingEvent;
+import org.apache.logging.log4j.status.StatusLogger;
 
 
 /**
@@ -124,6 +124,7 @@ public class WriterAppender extends AppenderSkeleton {
     /**
      * Does nothing.
      */
+    @Override
     public void activateOptions() {
     }
 
@@ -139,6 +140,7 @@ public class WriterAppender extends AppenderSkeleton {
      * <p>The format of the output will depend on this appender's
      * layout.
      */
+    @Override
     public void append(LoggingEvent event) {
 
         // Reminder: the nesting of calls is:
@@ -192,8 +194,8 @@ public class WriterAppender extends AppenderSkeleton {
      * @see #setWriter
      * @since 0.8.4
      */
-    public
-    synchronized void close() {
+    @Override
+    public synchronized void close() {
         if (this.closed) {
             return;
         }
@@ -263,6 +265,7 @@ public class WriterAppender extends AppenderSkeleton {
      * Set the {@link ErrorHandler} for this WriterAppender and also the
      * underlying {@link QuietWriter} if any.
      */
+    @Override
     public synchronized void setErrorHandler(ErrorHandler eh) {
         if (eh == null) {
             LOGGER.warn("You have tried to set a null error-handler.");
@@ -329,6 +332,7 @@ public class WriterAppender extends AppenderSkeleton {
      * The WriterAppender requires a layout. Hence, this method returns
      * <code>true</code>.
      */
+    @Override
     public boolean requiresLayout() {
         return true;
     }

@@ -103,11 +103,11 @@ public final class PatternParser {
      * Constructor.
      *
      * @param config
-     *            The current Configuration.
+     *            The current Configuration or {@code null}.
      * @param converterKey
      *            The key to lookup the converters.
      * @param expected
-     *            The expected base Class of each Converter.
+     *            The expected base Class of each Converter or {@code null}.
      */
     public PatternParser(final Configuration config, final String converterKey, final Class<?> expected) {
         this(config, converterKey, expected, null);
@@ -117,13 +117,13 @@ public final class PatternParser {
      * Constructor.
      *
      * @param config
-     *            The current Configuration.
+     *            The current Configuration or {@code null}.
      * @param converterKey
      *            The key to lookup the converters.
      * @param expectedClass
-     *            The expected base Class of each Converter.
+     *            The expected base Class of each Converter or {@code null}.
      * @param filterClass
-     *            Filter the returned plugins after calling the plugin manager.
+     *            Filter the returned plugins after calling the plugin manager, can be {@code null}.
      */
     public PatternParser(final Configuration config, final String converterKey, final Class<?> expectedClass,
             final Class<?> filterClass) {
@@ -192,7 +192,7 @@ public final class PatternParser {
                 pc = (LogEventPatternConverter) converter;
                 handlesThrowable |= pc.handlesThrowable();
             } else {
-                pc = new LiteralPatternConverter(config, Strings.EMPTY, true);
+                pc = SimpleLiteralPatternConverter.of(Strings.EMPTY);
             }
 
             FormattingInfo field;
@@ -376,8 +376,7 @@ public final class PatternParser {
                     default:
 
                         if (currentLiteral.length() != 0) {
-                            patternConverters.add(new LiteralPatternConverter(config, currentLiteral.toString(),
-                                    convertBackslashes));
+                            patternConverters.add(literalPattern(currentLiteral.toString(), convertBackslashes));
                             formattingInfos.add(FormattingInfo.getDefault());
                         }
 
@@ -494,7 +493,7 @@ public final class PatternParser {
 
         // while
         if (currentLiteral.length() != 0) {
-            patternConverters.add(new LiteralPatternConverter(config, currentLiteral.toString(), convertBackslashes));
+            patternConverters.add(literalPattern(currentLiteral.toString(), convertBackslashes));
             formattingInfos.add(FormattingInfo.getDefault());
         }
     }
@@ -571,7 +570,7 @@ public final class PatternParser {
             boolean errors = false;
             for (final Class<?> clazz : parmTypes) {
                 if (clazz.isArray() && clazz.getName().equals("[Ljava.lang.String;")) {
-                    final String[] optionsArray = options.toArray(new String[options.size()]);
+                    final String[] optionsArray = options.toArray(Strings.EMPTY_ARRAY);
                     parms[i] = optionsArray;
                 } else if (clazz.isAssignableFrom(Configuration.class)) {
                     parms[i] = config;
@@ -669,12 +668,12 @@ public final class PatternParser {
                 msg.append("] starting at position ");
             }
 
-            msg.append(Integer.toString(i));
+            msg.append(i);
             msg.append(" in conversion pattern.");
 
             LOGGER.error(msg.toString());
 
-            patternConverters.add(new LiteralPatternConverter(config, currentLiteral.toString(), convertBackslashes));
+            patternConverters.add(literalPattern(currentLiteral.toString(), convertBackslashes));
             formattingInfos.add(FormattingInfo.getDefault());
         } else {
             patternConverters.add(pc);
@@ -682,7 +681,7 @@ public final class PatternParser {
 
             if (currentLiteral.length() > 0) {
                 patternConverters
-                        .add(new LiteralPatternConverter(config, currentLiteral.toString(), convertBackslashes));
+                        .add(literalPattern(currentLiteral.toString(), convertBackslashes));
                 formattingInfos.add(FormattingInfo.getDefault());
             }
         }
@@ -690,5 +689,13 @@ public final class PatternParser {
         currentLiteral.setLength(0);
 
         return i;
+    }
+
+    // Create a literal pattern converter with support for substitutions if necessary
+    private LogEventPatternConverter literalPattern(String literal, boolean convertBackslashes) {
+        if (config != null && LiteralPatternConverter.containsSubstitutionSequence(literal)) {
+            return new LiteralPatternConverter(config, literal, convertBackslashes);
+        }
+        return SimpleLiteralPatternConverter.of(literal, convertBackslashes);
     }
 }

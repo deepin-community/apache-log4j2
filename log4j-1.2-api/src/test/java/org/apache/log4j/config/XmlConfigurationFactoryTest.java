@@ -16,20 +16,15 @@
  */
 package org.apache.log4j.config;
 
+import static org.junit.Assert.assertTrue;
+
+import java.io.File;
+
 import org.apache.log4j.LogManager;
 import org.apache.log4j.Logger;
 import org.apache.logging.log4j.core.config.ConfigurationFactory;
 import org.junit.BeforeClass;
 import org.junit.Test;
-
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.InputStream;
-import java.util.List;
-import java.util.Map;
-
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertTrue;
 
 /**
  * Test configuration from XML.
@@ -41,7 +36,7 @@ public class XmlConfigurationFactoryTest {
         System.setProperty(ConfigurationFactory.LOG4J1_CONFIGURATION_FILE_PROPERTY, "target/test-classes/log4j1-file.xml");
     }
     @Test
-    public void testXML() throws Exception {
+    public void testXML() {
         Logger logger = LogManager.getLogger("test");
         logger.debug("This is a test of the root logger");
         File file = new File("target/temp.A1");

@@ -36,7 +36,10 @@ import java.util.Map;
  * For this demo we cannot
  * </p>
  */
-public class NoGcLayout implements Layout<Serializable>, Encoder<LogEvent> {
+public class NoGcLayout implements Layout<Serializable> {
+
+    private static final byte[] EMPTY_BYTE_ARRAY = {};
+
     private final StringBuilder cachedStringBuilder = new StringBuilder(2048);
     private final PatternSerializer2 serializer = new PatternSerializer2();
     private final StringBuilderEncoder cachedHelper;
@@ -84,7 +87,6 @@ public class NoGcLayout implements Layout<Serializable>, Encoder<LogEvent> {
         }
 
         private PatternSerializer2(final PatternFormatter[] formatters) {
-            super();
             this.formatters = formatters;
         }
 
@@ -104,12 +106,12 @@ public class NoGcLayout implements Layout<Serializable>, Encoder<LogEvent> {
 
     @Override
     public byte[] getFooter() {
-        return new byte[0];
+        return EMPTY_BYTE_ARRAY;
     }
 
     @Override
     public byte[] getHeader() {
-        return new byte[0];
+        return EMPTY_BYTE_ARRAY;
     }
 
     @Override

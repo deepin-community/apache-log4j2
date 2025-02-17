@@ -29,17 +29,15 @@ import java.nio.charset.StandardCharsets;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.List;
-import java.util.Properties;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
 import org.apache.kafka.clients.producer.MockProducer;
-import org.apache.kafka.clients.producer.Producer;
 import org.apache.kafka.clients.producer.ProducerRecord;
 import org.apache.kafka.clients.producer.RecordMetadata;
-import org.apache.log4j.MDC;
 import org.apache.logging.log4j.Level;
+import org.apache.logging.log4j.ThreadContext;
 import org.apache.logging.log4j.categories.Appenders;
 import org.apache.logging.log4j.core.Appender;
 import org.apache.logging.log4j.core.LogEvent;
@@ -63,7 +61,7 @@ public class KafkaAppenderTest {
 
 			Future<RecordMetadata> retVal = super.send(record);
 
-			boolean isRetryTest = "true".equals(MDC.get("KafkaAppenderWithRetryCount"));
+			boolean isRetryTest = "true".equals(ThreadContext.get("KafkaAppenderWithRetryCount"));
 			if (isRetryTest) {
 				try {
 					throw new TimeoutException();
@@ -94,12 +92,7 @@ public class KafkaAppenderTest {
 
 	@BeforeClass
 	public static void setUpClass() throws Exception {
-		KafkaManager.producerFactory = new KafkaProducerFactory() {
-			@Override
-			public Producer<byte[], byte[]> newKafkaProducer(final Properties config) {
-				return kafka;
-			}
-		};
+		KafkaManager.producerFactory = config -> kafka;
 	}
 
 	@Rule
@@ -186,7 +179,7 @@ public class KafkaAppenderTest {
 	@Test
 	public void testAppendWithRetryCount() {
 		try {
-			MDC.put("KafkaAppenderWithRetryCount", "true");
+			ThreadContext.put("KafkaAppenderWithRetryCount", "true");
 			final Appender appender = ctx.getRequiredAppender("KafkaAppenderWithRetryCount");
 			final LogEvent logEvent = createLogEvent();
 			appender.append(logEvent);
@@ -196,7 +189,7 @@ public class KafkaAppenderTest {
 		} catch (Exception e) {
 			e.printStackTrace();
 		} finally {
-			MDC.clear();
+			ThreadContext.clearMap();
 		}
 
 	}

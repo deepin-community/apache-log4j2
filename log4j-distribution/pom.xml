@@ -20,8 +20,7 @@
   <parent>
     <groupId>org.apache.logging.log4j</groupId>
     <artifactId>log4j</artifactId>
-    <version>2.13.3</version>
-    <relativePath>../</relativePath>
+    <version>2.19.0</version>
   </parent>
   <artifactId>log4j-distribution</artifactId>
   <packaging>pom</packaging>
@@ -172,18 +171,18 @@
     </dependency>
     <dependency>
       <groupId>org.apache.logging.log4j</groupId>
-      <artifactId>log4j-slf4j18-impl</artifactId>
+      <artifactId>log4j-slf4j2-impl</artifactId>
       <version>${project.version}</version>
     </dependency>
     <dependency>
       <groupId>org.apache.logging.log4j</groupId>
-      <artifactId>log4j-slf4j18-impl</artifactId>
+      <artifactId>log4j-slf4j2-impl</artifactId>
       <version>${project.version}</version>
       <classifier>sources</classifier>
     </dependency>
     <dependency>
       <groupId>org.apache.logging.log4j</groupId>
-      <artifactId>log4j-slf4j18-impl</artifactId>
+      <artifactId>log4j-slf4j2-impl</artifactId>
       <version>${project.version}</version>
       <classifier>javadoc</classifier>
     </dependency>
@@ -201,6 +200,23 @@
     <dependency>
       <groupId>org.apache.logging.log4j</groupId>
       <artifactId>log4j-to-slf4j</artifactId>
+      <version>${project.version}</version>
+      <classifier>javadoc</classifier>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.logging.log4j</groupId>
+      <artifactId>log4j-to-jul</artifactId>
+      <version>${project.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.logging.log4j</groupId>
+      <artifactId>log4j-to-jul</artifactId>
+      <version>${project.version}</version>
+      <classifier>sources</classifier>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.logging.log4j</groupId>
+      <artifactId>log4j-to-jul</artifactId>
       <version>${project.version}</version>
       <classifier>javadoc</classifier>
     </dependency>
@@ -257,6 +273,40 @@
     </dependency>
     <dependency>
       <groupId>org.apache.logging.log4j</groupId>
+      <artifactId>log4j-jakarta-web</artifactId>
+      <version>${project.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.logging.log4j</groupId>
+      <artifactId>log4j-jakarta-web</artifactId>
+      <version>${project.version}</version>
+      <classifier>sources</classifier>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.logging.log4j</groupId>
+      <artifactId>log4j-jakarta-web</artifactId>
+      <version>${project.version}</version>
+      <classifier>javadoc</classifier>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.logging.log4j</groupId>
+      <artifactId>log4j-jakarta-smtp</artifactId>
+      <version>${project.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.logging.log4j</groupId>
+      <artifactId>log4j-jakarta-smtp</artifactId>
+      <version>${project.version}</version>
+      <classifier>sources</classifier>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.logging.log4j</groupId>
+      <artifactId>log4j-jakarta-smtp</artifactId>
+      <version>${project.version}</version>
+      <classifier>javadoc</classifier>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.logging.log4j</groupId>
       <artifactId>log4j-couchdb</artifactId>
       <version>${project.version}</version>
     </dependency>
@@ -274,18 +324,18 @@
     </dependency>
     <dependency>
       <groupId>org.apache.logging.log4j</groupId>
-      <artifactId>log4j-mongodb2</artifactId>
+      <artifactId>log4j-mongodb4</artifactId>
       <version>${project.version}</version>
     </dependency>
     <dependency>
       <groupId>org.apache.logging.log4j</groupId>
-      <artifactId>log4j-mongodb2</artifactId>
+      <artifactId>log4j-mongodb4</artifactId>
       <version>${project.version}</version>
       <classifier>sources</classifier>
     </dependency>
     <dependency>
       <groupId>org.apache.logging.log4j</groupId>
-      <artifactId>log4j-mongodb2</artifactId>
+      <artifactId>log4j-mongodb4</artifactId>
       <version>${project.version}</version>
       <classifier>javadoc</classifier>
     </dependency>
@@ -337,6 +387,23 @@
     <dependency>
       <groupId>org.apache.logging.log4j</groupId>
       <artifactId>log4j-jpa</artifactId>
+      <version>${project.version}</version>
+      <classifier>javadoc</classifier>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.logging.log4j</groupId>
+      <artifactId>log4j-jpl</artifactId>
+      <version>${project.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.logging.log4j</groupId>
+      <artifactId>log4j-jpl</artifactId>
+      <version>${project.version}</version>
+      <classifier>sources</classifier>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.logging.log4j</groupId>
+      <artifactId>log4j-jpl</artifactId>
       <version>${project.version}</version>
       <classifier>javadoc</classifier>
     </dependency>
@@ -410,6 +477,57 @@
     </dependency>
     <dependency>
       <groupId>org.apache.logging.log4j</groupId>
+      <artifactId>log4j-kubernetes</artifactId>
+      <version>${project.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.logging.log4j</groupId>
+      <artifactId>log4j-kubernetes</artifactId>
+      <version>${project.version}</version>
+      <classifier>sources</classifier>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.logging.log4j</groupId>
+      <artifactId>log4j-kubernetes</artifactId>
+      <version>${project.version}</version>
+      <classifier>javadoc</classifier>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.logging.log4j</groupId>
+      <artifactId>log4j-layout-template-json</artifactId>
+      <version>${project.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.logging.log4j</groupId>
+      <artifactId>log4j-layout-template-json</artifactId>
+      <version>${project.version}</version>
+      <classifier>sources</classifier>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.logging.log4j</groupId>
+      <artifactId>log4j-layout-template-json</artifactId>
+      <version>${project.version}</version>
+      <classifier>javadoc</classifier>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.logging.log4j</groupId>
+      <artifactId>log4j-spring-boot</artifactId>
+      <version>${project.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.logging.log4j</groupId>
+      <artifactId>log4j-spring-boot</artifactId>
+      <version>${project.version}</version>
+      <classifier>sources</classifier>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.logging.log4j</groupId>
+      <artifactId>log4j-spring-boot</artifactId>
+      <version>${project.version}</version>
+      <classifier>javadoc</classifier>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.logging.log4j</groupId>
       <artifactId>log4j-spring-cloud-config-client</artifactId>
       <version>${project.version}</version>
     </dependency>
@@ -424,6 +542,17 @@
       <artifactId>log4j-spring-cloud-config-client</artifactId>
       <version>${project.version}</version>
       <classifier>javadoc</classifier>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.logging.log4j</groupId>
+      <artifactId>log4j-osgi</artifactId>
+      <version>${project.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.logging.log4j</groupId>
+      <artifactId>log4j-osgi</artifactId>
+      <version>${project.version}</version>
+      <classifier>sources</classifier>
     </dependency>
   </dependencies>
   <build>
@@ -474,6 +603,81 @@
             </goals>
             <phase>package</phase>
           </execution> -->
+        </executions>
+      </plugin>
+      <!-- calculate checksums of source release for Apache dist area -->
+      <plugin>
+        <groupId>net.nicoulaj.maven.plugins</groupId>
+        <artifactId>checksum-maven-plugin</artifactId>
+        <version>1.11</version>
+        <executions>
+          <execution>
+            <id>calculate-checksums</id>
+            <goals>
+              <goal>files</goal>
+            </goals>
+            <!-- execute prior to maven-gpg-plugin:sign due to https://github.com/nicoulaj/checksum-maven-plugin/issues/112 -->
+            <phase>post-integration-test</phase>
+            <configuration>
+              <algorithms>
+                <algorithm>SHA-256</algorithm>
+                <algorithm>SHA-512</algorithm>
+              </algorithms>
+              <!-- https://maven.apache.org/apache-resource-bundles/#source-release-assembly-descriptor -->
+              <fileSets>
+                <fileSet>
+                  <directory>${project.build.directory}</directory>
+                  <includes>
+                    <include>apache-log4j-${project.version}-src.zip</include>
+                    <include>apache-log4j-${project.version}-src.tar.gz</include>
+                    <include>apache-log4j-${project.version}-bin.zip</include>
+                    <include>apache-log4j-${project.version}-bin.tar.gz</include>
+                  </includes>
+                </fileSet>
+              </fileSets>
+              <csvSummary>false</csvSummary>
+            </configuration>
+          </execution>
+        </executions>
+      </plugin>
+      <plugin>
+        <artifactId>maven-antrun-plugin</artifactId>
+        <version>3.1.0</version>
+        <executions>
+          <execution>
+            <phase>post-integration-test</phase>
+            <configuration>
+              <target>
+                <property name="spaces" value=" " />
+                <concat destfile="${project.build.directory}/apache-log4j-${project.version}-src.zip.sha256" append="yes">${spaces}apache-log4j-${project.version}-src.zip</concat>
+                <concat destfile="${project.build.directory}/apache-log4j-${project.version}-src.zip.sha512" append="yes">${spaces}apache-log4j-${project.version}-src.zip</concat>
+                <concat destfile="${project.build.directory}/apache-log4j-${project.version}-src.tar.gz.sha256" append="yes">${spaces}apache-log4j-${project.version}-src.tar.gz</concat>
+                <concat destfile="${project.build.directory}/apache-log4j-${project.version}-src.tar.gz.sha512" append="yes">${spaces}apache-log4j-${project.version}-src.tar.gz</concat>
+                <concat destfile="${project.build.directory}/apache-log4j-${project.version}-bin.zip.sha256" append="yes">${spaces}apache-log4j-${project.version}-bin.zip</concat>
+                <concat destfile="${project.build.directory}/apache-log4j-${project.version}-bin.zip.sha512" append="yes">${spaces}apache-log4j-${project.version}-bin.zip</concat>
+                <concat destfile="${project.build.directory}/apache-log4j-${project.version}-bin.tar.gz.sha256" append="yes">${spaces}apache-log4j-${project.version}-bin.tar.gz</concat>
+                <concat destfile="${project.build.directory}/apache-log4j-${project.version}-bin.tar.gz.sha512" append="yes">${spaces}apache-log4j-${project.version}-bin.tar.gz</concat>
+              </target>
+            </configuration>
+            <goals>
+              <goal>run</goal>
+            </goals>
+          </execution>
+        </executions>
+      </plugin>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-gpg-plugin</artifactId>
+        <executions>
+          <execution>
+            <id>sign-release-artifacts</id>
+            <goals>
+              <goal>sign</goal>
+            </goals>
+            <configuration>
+              <keyname>${Log4jSigningUserName}</keyname>
+            </configuration>
+          </execution>
         </executions>
       </plugin>
       <plugin>

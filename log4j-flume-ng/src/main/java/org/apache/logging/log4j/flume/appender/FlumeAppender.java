@@ -63,7 +63,7 @@ public final class FlumeAppender extends AbstractAppender implements FlumeEventF
     private final FlumeEventFactory factory;
 
     private Timer timer = new Timer("FlumeEvent", 5000);
-    private volatile long count = 0;
+    private volatile long count;
 
     /**
      * Which Manager will be used by the appender instance.
@@ -250,9 +250,19 @@ public final class FlumeAppender extends AbstractAppender implements FlumeEventF
 
         if (layout == null) {
             final int enterpriseNumber = Rfc5424Layout.DEFAULT_ENTERPRISE_NUMBER;
-            layout = Rfc5424Layout.createLayout(Facility.LOCAL0, null, enterpriseNumber, true, Rfc5424Layout.DEFAULT_MDCID,
-                    mdcPrefix, eventPrefix, false, null, null, null, excludes, includes, required, null, false, null,
-                    null);
+            layout = new Rfc5424Layout.Rfc5424LayoutBuilder()
+                    .setFacility(Facility.LOCAL0)
+                    .setEin(String.valueOf(enterpriseNumber))
+                    .setIncludeMDC(true)
+                    .setMdcId(Rfc5424Layout.DEFAULT_MDCID)
+                    .setMdcPrefix(mdcPrefix)
+                    .setEventPrefix(eventPrefix)
+                    .setIncludeNL(false)
+                    .setExcludes(excludes)
+                    .setIncludes(includes)
+                    .setRequired(required)
+                    .setUseTLSMessageFormat(false)
+                    .build();
         }
 
         if (name == null) {

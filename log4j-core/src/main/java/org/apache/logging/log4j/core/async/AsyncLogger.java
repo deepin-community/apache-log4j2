@@ -48,8 +48,8 @@ import com.lmax.disruptor.dsl.Disruptor;
 /**
  * AsyncLogger is a logger designed for high throughput and low latency logging. It does not perform any I/O in the
  * calling (application) thread, but instead hands off the work to another thread as soon as possible. The actual
- * logging is performed in the background thread. It uses the LMAX Disruptor library for inter-thread communication. (<a
- * href="http://lmax-exchange.github.com/disruptor/" >http://lmax-exchange.github.com/disruptor/</a>)
+ * logging is performed in the background thread. It uses <a href="https://lmax-exchange.github.io/disruptor/">LMAX
+ * Disruptor</a> for inter-thread communication.
  * <p>
  * To use AsyncLogger, specify the System property
  * {@code -DLog4jContextSelector=org.apache.logging.log4j.core.async.AsyncLoggerContextSelector} before you obtain a
@@ -496,9 +496,7 @@ public class AsyncLogger extends Logger implements EventTranslatorVararg<RingBuf
             if (contextData.getValue(prop.getName()) != null) {
                 continue; // contextMap overrides config properties
             }
-            final String value = prop.isValueNeedsLookup() //
-                    ? privateConfig.config.getStrSubstitutor().replace(event, prop.getValue()) //
-                    : prop.getValue();
+            final String value = prop.evaluate(privateConfig.config.getStrSubstitutor());
             contextData.putValue(prop.getName(), value);
         }
         event.setContextData(contextData);
@@ -512,5 +510,10 @@ public class AsyncLogger extends Logger implements EventTranslatorVararg<RingBuf
             return temp;
         }
         return contextData;
+    }
+
+    // package-protected for tests
+    AsyncLoggerDisruptor getAsyncLoggerDisruptor() {
+        return loggerDisruptor;
     }
 }

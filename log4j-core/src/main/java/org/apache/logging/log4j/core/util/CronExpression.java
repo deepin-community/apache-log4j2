@@ -535,7 +535,8 @@ public final class CronExpression {
                 }
                 if (s.length() > i + 3) {
                     c = s.charAt(i + 3);
-                    if (c == '-') {
+                    switch (c) {
+                    case '-':
                         i += 4;
                         sub = s.substring(i, i + 3);
                         eval = getDayOfWeekNumber(sub);
@@ -544,10 +545,11 @@ public final class CronExpression {
                                     "Invalid Day-of-Week value: '" + sub
                                             + "'", i);
                         }
-                    } else if (c == '#') {
+                        break;
+                    case '#':
                         try {
                             i += 4;
-                            nthdayOfWeek = Integer.parseInt(s.substring(i));
+                            nthdayOfWeek = Integers.parseInt(s.substring(i));
                             if (nthdayOfWeek < 1 || nthdayOfWeek > 5) {
                                 throw new Exception();
                             }
@@ -556,9 +558,13 @@ public final class CronExpression {
                                     "A numeric value between 1 and 5 must follow the '#' option",
                                     i);
                         }
-                    } else if (c == 'L') {
+                        break;
+                    case 'L':
                         lastdayOfWeek = true;
                         i++;
+                        break;
+                    default:
+                        break;
                     }
                 }
 
@@ -574,7 +580,8 @@ public final class CronExpression {
             return (i + 3);
         }
 
-        if (c == '?') {
+        switch (c) {
+        case '?':
             i++;
             if ((i + 1) < s.length()
                     && (s.charAt(i) != ' ' && s.charAt(i + 1) != '\t')) {
@@ -594,12 +601,10 @@ public final class CronExpression {
                             i);
                 }
             }
-
             addToSet(NO_SPEC_INT, -1, 0, type);
             return i;
-        }
-
-        if (c == '*' || c == '/') {
+        case '*':
+        case '/':
             if (c == '*' && (i + 1) >= s.length()) {
                 addToSet(ALL_SPEC_INT, -1, incr, type);
                 return i + 1;
@@ -637,10 +642,9 @@ public final class CronExpression {
             } else {
                 incr = 1;
             }
-
             addToSet(ALL_SPEC_INT, -1, incr, type);
             return i;
-        } else if (c == 'L') {
+        case 'L':
             i++;
             if (type == DAY_OF_MONTH) {
                 lastdayOfMonth = true;
@@ -667,23 +671,26 @@ public final class CronExpression {
                 }
             }
             return i;
-        } else if (c >= '0' && c <= '9') {
-            int val = Integer.parseInt(String.valueOf(c));
-            i++;
-            if (i >= s.length()) {
-                addToSet(val, -1, -1, type);
-            } else {
-                c = s.charAt(i);
-                if (c >= '0' && c <= '9') {
-                    final ValueSet vs = getValue(val, s, i);
-                    val = vs.value;
-                    i = vs.pos;
+        default:
+            if (c >= '0' && c <= '9') {
+                int val = Integer.parseInt(String.valueOf(c));
+                i++;
+                if (i >= s.length()) {
+                    addToSet(val, -1, -1, type);
+                } else {
+                    c = s.charAt(i);
+                    if (c >= '0' && c <= '9') {
+                        final ValueSet vs = getValue(val, s, i);
+                        val = vs.value;
+                        i = vs.pos;
+                    }
+                    i = checkNext(i, s, val, type);
+                    return i;
                 }
-                i = checkNext(i, s, val, type);
-                return i;
+            } else {
+                throw new ParseException("Unexpected character: " + c, i);
             }
-        } else {
-            throw new ParseException("Unexpected character: " + c, i);
+            break;
         }
 
         return i;
@@ -732,13 +739,14 @@ public final class CronExpression {
             return i;
         }
 
-        if (c == '#') {
+        switch (c) {
+        case '#':
             if (type != DAY_OF_WEEK) {
                 throw new ParseException("'#' option is not valid here. (pos=" + i + ")", i);
             }
             i++;
             try {
-                nthdayOfWeek = Integer.parseInt(s.substring(i));
+                nthdayOfWeek = Integers.parseInt(s.substring(i));
                 if (nthdayOfWeek < 1 || nthdayOfWeek > 5) {
                     throw new Exception();
                 }
@@ -747,14 +755,11 @@ public final class CronExpression {
                         "A numeric value between 1 and 5 must follow the '#' option",
                         i);
             }
-
             final TreeSet<Integer> set = getSet(type);
             set.add(val);
             i++;
             return i;
-        }
-
-        if (c == '-') {
+        case '-':
             i++;
             c = s.charAt(i);
             final int v = Integer.parseInt(String.valueOf(c));
@@ -785,18 +790,15 @@ public final class CronExpression {
                     final int v3 = vs.value;
                     addToSet(val, end, v3, type);
                     i = vs.pos;
-                    return i;
                 } else {
                     addToSet(val, end, v2, type);
-                    return i;
                 }
+                return i;
             } else {
                 addToSet(val, end, 1, type);
                 return i;
             }
-        }
-
-        if (c == '/') {
+        case '/':
             i++;
             c = s.charAt(i);
             final int v2 = Integer.parseInt(String.valueOf(c));
@@ -815,6 +817,8 @@ public final class CronExpression {
             } else {
                 throw new ParseException("Unexpected character '" + c + "' after '/'", i);
             }
+        default:
+            break;
         }
 
         addToSet(val, end, 0, type);
@@ -939,34 +943,43 @@ public final class CronExpression {
 
         final TreeSet<Integer> set = getSet(type);
 
-        if (type == SECOND || type == MINUTE) {
+        switch (type) {
+        case SECOND:
+        case MINUTE:
             if ((val < 0 || val > 59 || end > 59) && (val != ALL_SPEC_INT)) {
                 throw new ParseException(
                         "Minute and Second values must be between 0 and 59",
                         -1);
             }
-        } else if (type == HOUR) {
+            break;
+        case HOUR:
             if ((val < 0 || val > 23 || end > 23) && (val != ALL_SPEC_INT)) {
                 throw new ParseException(
                         "Hour values must be between 0 and 23", -1);
             }
-        } else if (type == DAY_OF_MONTH) {
+            break;
+        case DAY_OF_MONTH:
             if ((val < 1 || val > 31 || end > 31) && (val != ALL_SPEC_INT)
                     && (val != NO_SPEC_INT)) {
                 throw new ParseException(
                         "Day of month values must be between 1 and 31", -1);
             }
-        } else if (type == MONTH) {
+            break;
+        case MONTH:
             if ((val < 1 || val > 12 || end > 12) && (val != ALL_SPEC_INT)) {
                 throw new ParseException(
                         "Month values must be between 1 and 12", -1);
             }
-        } else if (type == DAY_OF_WEEK) {
+            break;
+        case DAY_OF_WEEK:
             if ((val == 0 || val > 7 || end > 7) && (val != ALL_SPEC_INT)
                     && (val != NO_SPEC_INT)) {
                 throw new ParseException(
                         "Day-of-Week values must be between 1 and 7", -1);
             }
+            break;
+        default:
+            break;
         }
 
         if ((incr == 0 || incr == -1) && val != ALL_SPEC_INT) {
@@ -987,48 +1000,58 @@ public final class CronExpression {
             set.add(ALL_SPEC); // put in a marker, but also fill values
         }
 
-        if (type == SECOND || type == MINUTE) {
+        switch (type) {
+        case SECOND:
+        case MINUTE:
             if (stopAt == -1) {
                 stopAt = 59;
             }
             if (startAt == -1 || startAt == ALL_SPEC_INT) {
                 startAt = 0;
             }
-        } else if (type == HOUR) {
+            break;
+        case HOUR:
             if (stopAt == -1) {
                 stopAt = 23;
             }
             if (startAt == -1 || startAt == ALL_SPEC_INT) {
                 startAt = 0;
             }
-        } else if (type == DAY_OF_MONTH) {
+            break;
+        case DAY_OF_MONTH:
             if (stopAt == -1) {
                 stopAt = 31;
             }
             if (startAt == -1 || startAt == ALL_SPEC_INT) {
                 startAt = 1;
             }
-        } else if (type == MONTH) {
+            break;
+        case MONTH:
             if (stopAt == -1) {
                 stopAt = 12;
             }
             if (startAt == -1 || startAt == ALL_SPEC_INT) {
                 startAt = 1;
             }
-        } else if (type == DAY_OF_WEEK) {
+            break;
+        case DAY_OF_WEEK:
             if (stopAt == -1) {
                 stopAt = 7;
             }
             if (startAt == -1 || startAt == ALL_SPEC_INT) {
                 startAt = 1;
             }
-        } else if (type == YEAR) {
+            break;
+        case YEAR:
             if (stopAt == -1) {
                 stopAt = MAX_YEAR;
             }
             if (startAt == -1 || startAt == ALL_SPEC_INT) {
                 startAt = 1970;
             }
+            break;
+        default:
+            break;
         }
 
         // if the end of the range is before the start, then we need to overflow into
@@ -1116,14 +1139,14 @@ public final class CronExpression {
         final ValueSet val = new ValueSet();
 
         val.pos = (i < s.length()) ? i : i + 1;
-        val.value = Integer.parseInt(s1.toString());
+        val.value = Integers.parseInt(s1.toString());
         return val;
     }
 
     protected int getNumericValue(final String s, final int i) {
         final int endOfVal = findNextWhiteSpace(i, s);
         final String val = s.substring(i, endOfVal);
-        return Integer.parseInt(val);
+        return Integers.parseInt(val);
     }
 
     protected int getMonthNumber(final String s) {
@@ -1172,14 +1195,11 @@ public final class CronExpression {
                 return null;
             }
 
-            SortedSet<Integer> st = null;
-            int t = 0;
-
             int sec = cl.get(Calendar.SECOND);
             int min = cl.get(Calendar.MINUTE);
 
             // get second.................................................
-            st = seconds.tailSet(sec);
+            SortedSet<Integer> st = seconds.tailSet(sec);
             if (st != null && st.size() != 0) {
                 sec = st.first();
             } else {
@@ -1191,7 +1211,7 @@ public final class CronExpression {
 
             min = cl.get(Calendar.MINUTE);
             int hr = cl.get(Calendar.HOUR_OF_DAY);
-            t = -1;
+            int t = -1;
 
             // get minute.................................................
             st = minutes.tailSet(min);

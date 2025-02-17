@@ -24,7 +24,6 @@ import org.apache.logging.log4j.core.config.plugins.Plugin;
 import org.apache.logging.log4j.core.lookup.AbstractLookup;
 import org.apache.logging.log4j.core.lookup.StrLookup;
 import org.apache.logging.log4j.message.MapMessage;
-import org.apache.logging.log4j.message.StringMapMessage;
 import org.apache.logging.log4j.message.Message;
 import org.apache.logging.log4j.status.StatusLogger;
 
@@ -52,6 +51,9 @@ public class MapMessageLookup extends AbstractLookup {
      */
     @Override
     public String lookup(final LogEvent event, final String key) {
+        if (event == null) {
+            return null;
+        }
         final Message msg = event.getMessage();
         if (msg instanceof MapMessage) {
             try {
@@ -62,7 +64,6 @@ public class MapMessageLookup extends AbstractLookup {
                 return mapMessage.get(key);
             } catch (final Exception ex) {
                 LOGGER.warn(LOOKUP, "Error while getting property [{}].", key, ex);
-                return null;
             }
         }
         return null;

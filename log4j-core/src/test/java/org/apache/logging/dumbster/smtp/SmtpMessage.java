@@ -16,12 +16,16 @@
  */
 package org.apache.logging.dumbster.smtp;
 
+import static org.apache.logging.log4j.util.Chars.LF;
+
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+
+import org.apache.logging.log4j.util.Strings;
 
 /**
  * Container for a complete SMTP message - headers and message body.
@@ -84,9 +88,9 @@ public class SmtpMessage {
     public String[] getHeaderValues(final String name) {
         final List<String> values = headers.get(name);
         if (values == null) {
-            return new String[0];
+            return Strings.EMPTY_ARRAY;
         }
-        return values.toArray(new String[values.size()]);
+        return values.toArray(Strings.EMPTY_ARRAY);
     }
 
     /**
@@ -143,12 +147,12 @@ public class SmtpMessage {
                 msg.append(name);
                 msg.append(": ");
                 msg.append(value);
-                msg.append('\n');
+                msg.append(LF);
             }
         }
-        msg.append('\n');
+        msg.append(LF);
         msg.append(body);
-        msg.append('\n');
+        msg.append(LF);
         return msg.toString();
     }
 }

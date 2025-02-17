@@ -20,9 +20,9 @@ import java.nio.file.Path;
 import java.util.Map;
 
 import org.apache.logging.log4j.core.pattern.NotANumber;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
-import static org.junit.Assert.*;
+import static org.junit.jupiter.api.Assertions.*;
 
 /**
  * Test getEligibleFiles method.
@@ -34,11 +34,20 @@ public class EligibleFilesTest {
         final String path = "target/test-classes/rolloverPath/log4j.txt.20170112_09-" + NotANumber.VALUE + ".gz";
         final TestRolloverStrategy strategy = new TestRolloverStrategy();
         final Map<Integer, Path> files = strategy.findFilesInPath(path);
-        assertTrue("No files found", files.size() > 0);
-        assertTrue("Incorrect number of files found. Should be 30, was " + files.size(), files.size() == 30);
+        assertTrue(files.size() > 0, "No files found");
+        assertEquals(30, files.size(), "Incorrect number of files found. Should be 30, was " + files.size());
     }
 
-    private class TestRolloverStrategy extends AbstractRolloverStrategy {
+    @Test
+    public void runTestWithPlusCharacter() throws Exception {
+        final String path = "target/test-classes/rolloverPath/log4j.20211028T194500+0200." + NotANumber.VALUE + ".log.gz";
+        final TestRolloverStrategy strategy = new TestRolloverStrategy();
+        final Map<Integer, Path> files = strategy.findFilesWithPlusInPath(path);
+        assertTrue(files.size() > 0, "No files found");
+        assertEquals(30, files.size(), "Incorrect number of files found. Should be 30, was " + files.size());
+    }
+
+    private static class TestRolloverStrategy extends AbstractRolloverStrategy {
 
         public TestRolloverStrategy() {
             super(null);
@@ -51,6 +60,11 @@ public class EligibleFilesTest {
 
         public Map<Integer, Path> findFilesInPath(final String path) {
             return getEligibleFiles(path, "log4j.txt.%d{yyyyMMdd}-%i.gz");
+        }
+
+        public Map<Integer, Path> findFilesWithPlusInPath(final String path) {
+            // timezone might expand to "+0200", because of '+' we have to be careful when working with regex
+            return getEligibleFiles(path, "log4j.txt.%d{yyyyMMdd'T'HHmmssZ}.%i.log.gz");
         }
     }
 }

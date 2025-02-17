@@ -17,47 +17,60 @@
 
 package org.apache.logging.log4j.core.util;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 
+import java.io.File;
 import java.net.URI;
-import java.net.URISyntaxException;
 
-import org.apache.logging.log4j.util.PropertiesUtil;
-import org.junit.Assume;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.condition.EnabledOnOs;
+import org.junit.jupiter.api.condition.OS;
 
 public class NetUtilsTest {
 
-    private static final boolean IS_WINDOWS = PropertiesUtil.getProperties().isOsWindows();
-
     @Test
-    public void testToUriWithoutBackslashes() throws URISyntaxException {
+    public void testToUriWithoutBackslashes() {
         final String config = "file:///path/to/something/on/unix";
-        final URI uri = NetUtils.toURI(config);
+        URI uri = NetUtils.toURI(config);
 
-        assertNotNull("The URI should not be null.", uri);
-        assertEquals("The URI is not correct.", "file:///path/to/something/on/unix", uri.toString());
+        assertNotNull(uri, "The URI should not be null.");
+        assertEquals("file:///path/to/something/on/unix", uri.toString(), "The URI is not correct.");
+
+        final String properUriPath = "/path/without/spaces";
+        uri = NetUtils.toURI(properUriPath);
+
+        assertNotNull(uri, "The URI should not be null.");
+        assertEquals(properUriPath, uri.toString(), "The URI is not correct.");
     }
 
     @Test
-    public void testToUriWindowsWithBackslashes() throws URISyntaxException {
-        Assume.assumeTrue(IS_WINDOWS);
+    public void testToUriUnixWithSpaces() {
+        final String pathWithSpaces = "/ path / with / spaces";
+        final URI uri = NetUtils.toURI(pathWithSpaces);
+
+        assertNotNull(uri, "The URI should not be null.");
+        assertEquals(new File(pathWithSpaces).toURI().toString(), uri.toString(), "The URI is not correct.");
+    }
+
+    @Test
+    @EnabledOnOs(OS.WINDOWS)
+    public void testToUriWindowsWithBackslashes() {
         final String config = "file:///D:\\path\\to\\something/on/windows";
         final URI uri = NetUtils.toURI(config);
 
-        assertNotNull("The URI should not be null.", uri);
-        assertEquals("The URI is not correct.", "file:///D:/path/to/something/on/windows", uri.toString());
+        assertNotNull(uri, "The URI should not be null.");
+        assertEquals("file:///D:/path/to/something/on/windows", uri.toString(), "The URI is not correct.");
     }
 
     @Test
-    public void testToUriWindowsAbsolutePath() throws URISyntaxException {
-        Assume.assumeTrue(IS_WINDOWS);
+    @EnabledOnOs(OS.WINDOWS)
+    public void testToUriWindowsAbsolutePath() {
         final String config = "D:\\path\\to\\something\\on\\windows";
         final URI uri = NetUtils.toURI(config);
 
-        assertNotNull("The URI should not be null.", uri);
-        assertEquals("The URI is not correct.", "file:/D:/path/to/something/on/windows", uri.toString());
+        assertNotNull(uri, "The URI should not be null.");
+        assertEquals("file:/D:/path/to/something/on/windows", uri.toString(), "The URI is not correct.");
     }
 
 }

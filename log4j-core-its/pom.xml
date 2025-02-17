@@ -20,8 +20,7 @@
   <parent>
     <groupId>org.apache.logging.log4j</groupId>
     <artifactId>log4j</artifactId>
-    <version>2.13.3</version>
-    <relativePath>../</relativePath>
+    <version>2.19.0</version>
   </parent>
   <artifactId>log4j-core-its</artifactId>
   <packaging>jar</packaging>
@@ -96,14 +95,13 @@
       <artifactId>jackson-dataformat-xml</artifactId>
       <optional>true</optional>
     </dependency>
-    <!-- POM for jackson-dataformat-xml 2.9.2 depends on woodstox-core 5.0.3 -->
+    <!-- POM for jackson-dataformat-xml depends on woodstox-core -->
     <dependency>
       <groupId>com.fasterxml.woodstox</groupId>
       <artifactId>woodstox-core</artifactId>
-      <version>5.0.3</version>
+      <version>${woodstox.version}</version>
       <optional>true</optional>
     </dependency>
-
     <!-- TEST DEPENDENCIES -->
     <!-- Log4j 1.2 tests -->
     <dependency>
@@ -125,13 +123,18 @@
     </dependency>
     <!-- JUnit, naturally -->
     <dependency>
-      <groupId>junit</groupId>
-      <artifactId>junit</artifactId>
+      <groupId>org.junit.vintage</groupId>
+      <artifactId>junit-vintage-engine</artifactId>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.junit.jupiter</groupId>
+      <artifactId>junit-jupiter-engine</artifactId>
       <scope>test</scope>
     </dependency>
     <dependency>
       <groupId>org.hamcrest</groupId>
-      <artifactId>hamcrest-all</artifactId>
+      <artifactId>hamcrest</artifactId>
       <scope>test</scope>
     </dependency>
     <!-- Useful mock classes and utilities -->
@@ -158,9 +161,8 @@
     </dependency>
     <!-- Used for JMS appenders (needs an implementation of course) -->
     <dependency>
-      <groupId>org.jboss.spec.javax.jms</groupId>
-      <artifactId>jboss-jms-api_1.1_spec</artifactId>
-      <scope>provided</scope>
+      <groupId>javax.jms</groupId>
+      <artifactId>javax.jms-api</artifactId>
       <optional>true</optional>
     </dependency>
     <!-- JPA, JNDI and JMS tests -->
@@ -174,6 +176,12 @@
           <artifactId>geronimo-jms_1.1_spec</artifactId>
         </exclusion>
       </exclusions>
+    </dependency>
+    <!-- For Async tests -->
+    <dependency>
+      <groupId>org.hdrhistogram</groupId>
+      <artifactId>HdrHistogram</artifactId>
+      <scope>test</scope>
     </dependency>
   </dependencies>
   <build>

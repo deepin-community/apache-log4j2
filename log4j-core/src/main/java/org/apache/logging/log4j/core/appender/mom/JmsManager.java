@@ -40,7 +40,6 @@ import org.apache.logging.log4j.core.appender.ManagerFactory;
 import org.apache.logging.log4j.core.net.JndiManager;
 import org.apache.logging.log4j.core.util.Log4jThread;
 import org.apache.logging.log4j.status.StatusLogger;
-import org.apache.logging.log4j.util.BiConsumer;
 
 /**
  * Consider this class <b>private</b>; it is only <b>public</b> for access by integration tests.
@@ -125,12 +124,16 @@ public class JmsManager extends AbstractManager {
 
         @Override
         public JmsManager createManager(final String name, final JmsManagerConfiguration data) {
-            try {
-                return new JmsManager(name, data);
-            } catch (final Exception e) {
-                logger().error("Error creating JmsManager using JmsManagerConfiguration [{}]", data, e);
-                return null;
+            if (JndiManager.isJndiJmsEnabled()) {
+                try {
+                    return new JmsManager(name, data);
+                } catch (final Exception e) {
+                    logger().error("Error creating JmsManager using JmsManagerConfiguration [{}]", data, e);
+                    return null;
+                }
             }
+            logger().error("JNDI must be enabled by setting log4j2.enableJndiJms=true");
+            return null;
         }
     }
 
@@ -141,7 +144,7 @@ public class JmsManager extends AbstractManager {
 
         private final CountDownLatch latch = new CountDownLatch(1);
 
-        private volatile boolean shutdown = false;
+        private volatile boolean shutdown;
 
         private final Object owner;
 
@@ -349,7 +352,7 @@ public class JmsManager extends AbstractManager {
      * @param object
      *            The LogEvent or String message to wrap.
      * @return A new JMS message containing the provided object.
-     * @throws JMSException
+     * @throws JMSException if the JMS provider fails to create this message due to some internal error.
      */
     public Message createMessage(final Serializable object) throws JMSException {
         if (object instanceof String) {
@@ -370,7 +373,7 @@ public class JmsManager extends AbstractManager {
      * Creates a MessageConsumer on this Destination using the current Session.
      *
      * @return A MessageConsumer on this Destination.
-     * @throws JMSException
+     * @throws JMSException if the session fails to create a consumer due to some internal error.
      */
     public MessageConsumer createMessageConsumer() throws JMSException {
         return this.session.createConsumer(this.destination);
@@ -384,7 +387,7 @@ public class JmsManager extends AbstractManager {
      * @param destination
      *            The JMS Destination for the MessageProducer
      * @return A MessageProducer on this Destination.
-     * @throws JMSException
+     * @throws JMSException if the session fails to create a MessageProducer due to some internal error.
      */
     public MessageProducer createMessageProducer(final Session session, final Destination destination)
             throws JMSException {
@@ -417,15 +420,12 @@ public class JmsManager extends AbstractManager {
     private MapMessage map(final org.apache.logging.log4j.message.MapMessage<?, ?> log4jMapMessage,
             final MapMessage jmsMapMessage) {
         // Map without calling org.apache.logging.log4j.message.MapMessage#getData() which makes a copy of the map.
-        log4jMapMessage.forEach(new BiConsumer<String, Object>() {
-            @Override
-            public void accept(final String key, final Object value) {
-                try {
-                    jmsMapMessage.setObject(key, value);
-                } catch (final JMSException e) {
-                    throw new IllegalArgumentException(String.format("%s mapping key '%s' to value '%s': %s",
-                            e.getClass(), key, value, e.getLocalizedMessage()), e);
-                }
+        log4jMapMessage.forEach((key, value) -> {
+            try {
+                jmsMapMessage.setObject(key, value);
+            } catch (final JMSException e) {
+                throw new IllegalArgumentException(String.format("%s mapping key '%s' to value '%s': %s",
+                        e.getClass(), key, value, e.getLocalizedMessage()), e);
             }
         });
         return jmsMapMessage;

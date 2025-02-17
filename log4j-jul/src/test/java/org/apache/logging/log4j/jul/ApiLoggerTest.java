@@ -21,6 +21,7 @@ import static org.hamcrest.Matchers.equalTo;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertThat;
+import static org.junit.Assert.fail;
 
 import java.util.logging.Logger;
 
@@ -48,6 +49,7 @@ public class ApiLoggerTest extends AbstractLoggerTest {
     @Before
     public void setUp() throws Exception {
         logger = Logger.getLogger(LOGGER_NAME);
+        logger.setFilter(null);
         assertThat(logger.getLevel(), equalTo(java.util.logging.Level.FINE));
         eventAppender = ListAppender.getListAppender("TestAppender");
         flowAppender = ListAppender.getListAppender("FlowAppender");
@@ -81,8 +83,12 @@ public class ApiLoggerTest extends AbstractLoggerTest {
         logger.setParent(null);
     }
 
-    @Test(expected = UnsupportedOperationException.class)
-    public void testSetLevelFails() throws Exception {
-        logger.setLevel(null);
+    @Test
+    public void testSetLevelDoesNotFail() throws Exception {
+        try {
+            logger.setLevel(null);
+        } catch (Throwable e) {
+            fail("should not throw");
+        }
     }
 }

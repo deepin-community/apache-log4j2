@@ -20,6 +20,7 @@ import java.lang.management.ManagementFactory;
 import java.util.List;
 import java.util.Map;
 
+import org.apache.logging.log4j.core.LogEvent;
 import org.apache.logging.log4j.core.config.plugins.Plugin;
 
 /**
@@ -42,11 +43,23 @@ public class JmxRuntimeInputArgumentsLookup extends MapLookup {
      * Constructor when used directly as a plugin.
      */
     public JmxRuntimeInputArgumentsLookup() {
-        super();
     }
 
     public JmxRuntimeInputArgumentsLookup(final Map<String, String> map) {
         super(map);
     }
 
+    @Override
+    public String lookup(final LogEvent event, final String key) {
+        return lookup(key);
+    }
+
+    @Override
+    public String lookup(final String key) {
+        if (key == null) {
+            return null;
+        }
+        Map<String, String> map = getMap();
+        return map == null ? null : map.get(key);
+    }
 }
