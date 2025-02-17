@@ -30,11 +30,11 @@ import org.apache.logging.log4j.core.config.plugins.validation.constraints.Requi
 import org.apache.logging.log4j.core.config.plugins.validation.constraints.ValidHost;
 import org.apache.logging.log4j.core.config.plugins.validation.constraints.ValidPort;
 import org.apache.logging.log4j.core.filter.AbstractFilterable;
-import org.apache.logging.log4j.core.util.NameUtil;
 import org.apache.logging.log4j.status.StatusLogger;
 import org.apache.logging.log4j.util.LoaderUtil;
 import org.apache.logging.log4j.util.Strings;
 import org.bson.codecs.configuration.CodecRegistries;
+import org.bson.codecs.configuration.CodecRegistry;
 
 import com.mongodb.MongoClient;
 import com.mongodb.MongoClientOptions;
@@ -44,13 +44,20 @@ import com.mongodb.WriteConcern;
 import com.mongodb.client.MongoDatabase;
 
 /**
- * The MongoDB implementation of {@link NoSqlProvider}.
+ * The MongoDB implementation of {@link NoSqlProvider}.using the MongoDB driver version 3 API.
  */
 @Plugin(name = "MongoDb3", category = Core.CATEGORY_NAME, printObject = true)
 public final class MongoDbProvider implements NoSqlProvider<MongoDbConnection> {
 
     public static class Builder<B extends Builder<B>> extends AbstractFilterable.Builder<B>
             implements org.apache.logging.log4j.core.util.Builder<MongoDbProvider> {
+
+        // @formatter:off
+        private static final CodecRegistry CODEC_REGISTRIES = CodecRegistries.fromRegistries(
+            MongoClient.getDefaultCodecRegistry(),
+            CodecRegistries.fromCodecs(LevelCodec.INSTANCE),
+            CodecRegistries.fromCodecs(new MongoDbDocumentObjectCodec()));
+        // @formatter:on
 
         private static WriteConcern toWriteConcern(final String writeConcernConstant,
                 final String writeConcernConstantClassName) {
@@ -142,13 +149,14 @@ public final class MongoDbProvider implements NoSqlProvider<MongoDbConnection> {
                                     + "required.", factoryClassName, factoryMethodName);
                             return null;
                         }
-                    } else if (object == null) {
-                        LOGGER.error("The factory method [{}.{}()] returned null.", factoryClassName,
-                                factoryMethodName);
-                        return null;
                     } else {
-                        LOGGER.error("The factory method [{}.{}()] returned an unsupported type [{}].",
-                                factoryClassName, factoryMethodName, object.getClass().getName());
+                        if (object == null) {
+                            LOGGER.error("The factory method [{}.{}()] returned null.", factoryClassName,
+                                    factoryMethodName);
+                        } else {
+                            LOGGER.error("The factory method [{}.{}()] returned an unsupported type [{}].",
+                                    factoryClassName, factoryMethodName, object.getClass().getName());
+                        }
                         return null;
                     }
 
@@ -170,8 +178,7 @@ public final class MongoDbProvider implements NoSqlProvider<MongoDbConnection> {
                 MongoCredential mongoCredential = null;
                 description = "database=" + databaseName;
                 if (Strings.isNotEmpty(userName) && Strings.isNotEmpty(password)) {
-                    description += ", username=" + userName + ", passwordHash="
-                            + NameUtil.md5(password + MongoDbProvider.class.getName());
+                    description += ", username=" + userName;
                     mongoCredential = MongoCredential.createCredential(userName, databaseName, password.toCharArray());
                 }
                 try {
@@ -180,9 +187,7 @@ public final class MongoDbProvider implements NoSqlProvider<MongoDbConnection> {
                     final WriteConcern writeConcern = toWriteConcern(writeConcernConstant, writeConcernConstantClassName);
                     // @formatter:off
                     final MongoClientOptions options = MongoClientOptions.builder()
-                            .codecRegistry(CodecRegistries.fromRegistries(
-                                            CodecRegistries.fromCodecs(new LevelCodec()),
-                                            MongoClient.getDefaultCodecRegistry()))
+                            .codecRegistry(CODEC_REGISTRIES)
                             .writeConcern(writeConcern)
                             .build();
                     // @formatter:on

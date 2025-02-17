@@ -25,7 +25,10 @@ package org.apache.logging.log4j.junit;
  * &#64;Rule
  * public final ThreadContextMapRule threadContextRule = new ThreadContextMapRule();
  * </pre>
+ *
+ * @deprecated use {@link UsingThreadContextMap} with JUnit 5
  */
+@Deprecated
 public class ThreadContextMapRule extends ThreadContextRule {
 
     /**

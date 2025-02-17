@@ -17,6 +17,8 @@
 package org.apache.logging.log4j.core.util;
 
 import java.io.InterruptedIOException;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Locale;
 import java.util.Properties;
 
@@ -146,9 +148,9 @@ public final class OptionConverter {
      */
     public static int toInt(final String value, final int defaultValue) {
         if (value != null) {
-            final String s = value.trim();
+            final String s = value;
             try {
-                return Integer.parseInt(s);
+                return Integers.parseInt(s);
             } catch (final NumberFormatException e) {
                 LOGGER.error("[{}] is not in proper int form.", s, e);
             }
@@ -187,12 +189,11 @@ public final class OptionConverter {
             + ":pri=[" + levelName + "]");
 
         try {
-            Class customLevel = Loader.loadClass(clazz);
+            Class<?> customLevel = Loader.loadClass(clazz);
 
             // get a ref to the specified class' static method
             // toLevel(String, org.apache.log4j.Level)
-            Class[] paramTypes = new Class[] { String.class, Level.class
-            };
+            Class<?>[] paramTypes = new Class[] { String.class, Level.class };
             java.lang.reflect.Method toLevelMethod =
                 customLevel.getMethod("toLevel", paramTypes);
 
@@ -298,7 +299,7 @@ public final class OptionConverter {
                     LOGGER.error("A \"{}\" object is not assignable to a \"{}\" variable.", className,
                         superClass.getName());
                     LOGGER.error("The class \"{}\" was loaded by [{}] whereas object of type [{}] was loaded by [{}].",
-                        superClass.getName(), superClass.getClassLoader(), classObj.getName());
+                        superClass.getName(), superClass.getClassLoader(), classObj.getTypeName(), classObj.getName());
                     return defaultValue;
                 }
                 return classObj.newInstance();
@@ -348,6 +349,11 @@ public final class OptionConverter {
      */
     public static String substVars(final String val, final Properties props) throws
         IllegalArgumentException {
+        return substVars(val, props, new ArrayList<>());
+    }
+
+    private static String substVars(final String val, final Properties props, List<String> keys)
+            throws IllegalArgumentException {
 
         final StringBuilder sbuf = new StringBuilder();
 
@@ -370,8 +376,8 @@ public final class OptionConverter {
             k = val.indexOf(DELIM_STOP, j);
             if (k == -1) {
                 throw new IllegalArgumentException(Strings.dquote(val)
-                    + " has no closing brace. Opening brace at position " + j
-                    + '.');
+                        + " has no closing brace. Opening brace at position " + j
+                        + '.');
             }
             j += DELIM_START_LEN;
             final String key = val.substring(j, k);
@@ -383,13 +389,21 @@ public final class OptionConverter {
             }
 
             if (replacement != null) {
+
                 // Do variable substitution on the replacement string
                 // such that we can solve "Hello ${x2}" as "Hello p1"
                 // the where the properties are
                 // x1=p1
                 // x2=${x1}
-                final String recursiveReplacement = substVars(replacement, props);
-                sbuf.append(recursiveReplacement);
+                if (!keys.contains(key)) {
+                    List<String> usedKeys = new ArrayList<>(keys);
+                    usedKeys.add(key);
+                    final String recursiveReplacement = substVars(replacement, props, usedKeys);
+                    sbuf.append(recursiveReplacement);
+                } else {
+                    sbuf.append(replacement);
+                }
+
             }
             i = k + DELIM_STOP_LEN;
         }

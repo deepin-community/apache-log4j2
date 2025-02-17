@@ -24,6 +24,7 @@ import java.security.KeyStoreException;
 import java.security.NoSuchAlgorithmException;
 import java.security.cert.CertificateException;
 import java.util.Arrays;
+import java.util.Objects;
 
 import org.apache.logging.log4j.core.config.ConfigurationSource;
 import org.apache.logging.log4j.core.util.NetUtils;
@@ -32,6 +33,7 @@ import org.apache.logging.log4j.core.util.NetUtils;
  * Configuration of the KeyStore
  */
 public class AbstractKeyStoreConfiguration extends StoreConfiguration<KeyStore> {
+
     private final KeyStore keyStore;
     private final String keyStoreType;
 
@@ -63,21 +65,20 @@ public class AbstractKeyStoreConfiguration extends StoreConfiguration<KeyStore> 
     @Override
     protected KeyStore load() throws StoreConfigurationException {
         final String loadLocation = this.getLocation();
+        final char[] password = this.getPasswordAsCharArray();
         LOGGER.debug("Loading keystore from location {}", loadLocation);
         try {
+            final KeyStore ks = KeyStore.getInstance(this.keyStoreType);
             if (loadLocation == null) {
-                throw new IOException("The location is null");
+                if (keyStoreType.equalsIgnoreCase(JKS) || keyStoreType.equalsIgnoreCase(PKCS12)) {
+                    throw new IOException("The location is null");
+                }
+                ks.load(null, password);
+                LOGGER.debug("KeyStore successfully loaded");
+                return ks;
             }
             try (final InputStream fin = openInputStream(loadLocation)) {
-                final KeyStore ks = KeyStore.getInstance(this.keyStoreType);
-                final char[] password = this.getPasswordAsCharArray();
-                try {
-                    ks.load(fin, password);
-                } finally {
-                    if (password != null) {
-                        Arrays.fill(password, '\0');
-                    }
-                }
+                ks.load(fin, password);
                 LOGGER.debug("KeyStore successfully loaded from location {}", loadLocation);
                 return ks;
             }
@@ -94,8 +95,12 @@ public class AbstractKeyStoreConfiguration extends StoreConfiguration<KeyStore> 
             LOGGER.error("The keystore file {} is not found", loadLocation, e);
             throw new StoreConfigurationException(loadLocation, e);
         } catch (final IOException e) {
-            LOGGER.error("Something is wrong with the format of the keystore or the given password for location", loadLocation, e);
+            LOGGER.error("Something is wrong with the format of the keystore or the given password for location {}", loadLocation, e);
             throw new StoreConfigurationException(loadLocation, e);
+        } finally {
+            if (password != null) {
+                Arrays.fill(password, '\0');
+            }
         }
     }
 
@@ -128,18 +133,10 @@ public class AbstractKeyStoreConfiguration extends StoreConfiguration<KeyStore> 
             return false;
         }
         final AbstractKeyStoreConfiguration other = (AbstractKeyStoreConfiguration) obj;
-        if (keyStore == null) {
-            if (other.keyStore != null) {
-                return false;
-            }
-        } else if (!keyStore.equals(other.keyStore)) {
+        if (!Objects.equals(keyStore, other.keyStore)) {
             return false;
         }
-        if (keyStoreType == null) {
-            if (other.keyStoreType != null) {
-                return false;
-            }
-        } else if (!keyStoreType.equals(other.keyStoreType)) {
+        if (!Objects.equals(keyStoreType, other.keyStoreType)) {
             return false;
         }
         return true;

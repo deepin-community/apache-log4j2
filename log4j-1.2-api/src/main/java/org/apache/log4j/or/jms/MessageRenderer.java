@@ -16,23 +16,24 @@
  */
 package org.apache.log4j.or.jms;
 
+import javax.jms.DeliveryMode;
+import javax.jms.JMSException;
+import javax.jms.Message;
+
 import org.apache.log4j.or.ObjectRenderer;
 import org.apache.logging.log4j.Logger;
 import org.apache.logging.log4j.status.StatusLogger;
-
-import javax.jms.Message;
-import javax.jms.JMSException;
-import javax.jms.DeliveryMode;
 
 /**
  * Log4j 1.x JMS Message Renderer
  */
 public class MessageRenderer implements ObjectRenderer {
     private static final Logger LOGGER = StatusLogger.getLogger();
-    
+
     /**
      Render a {@link javax.jms.Message}.
      */
+    @Override
     public
     String  doRender(Object obj) {
         if (obj instanceof Message) {
@@ -80,8 +81,7 @@ public class MessageRenderer implements ObjectRenderer {
                 LOGGER.error("Could not parse Message.", e);
             }
             return sb.toString();
-        } else {
-            return obj.toString();
         }
+        return obj.toString();
     }
 }

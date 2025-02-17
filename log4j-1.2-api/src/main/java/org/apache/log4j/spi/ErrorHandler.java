@@ -27,11 +27,6 @@ import org.apache.log4j.Logger;
  * Error handling is a particularly tedious to get right because by
  * definition errors are hard to predict and to reproduce.
  * </p>
- * <p>
- * Please take the time to contact the author in case you discover
- * that errors are not properly handled. You are most welcome to
- * suggest new error handling policies or criticize existing policies.
- * </p>
  */
 public interface ErrorHandler {
 
@@ -49,7 +44,7 @@ public interface ErrorHandler {
 
     /**
      * Equivalent to the {@link #error(String, Exception, int,
-     * LoggingEvent)} with the the event parameter set to
+     * LoggingEvent)} with the event parameter set to
      * <code>null</code>.
      *
      * @param message   The message associated with the error.

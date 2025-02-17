@@ -32,6 +32,11 @@ import org.apache.logging.log4j.util.PerformanceSensitive;
  */
 public class AppenderControl extends AbstractFilterable {
 
+    /**
+     * The empty array.
+     */
+    static final AppenderControl[] EMPTY_ARRAY = {};
+
     private final ThreadLocal<AppenderControl> recursive = new ThreadLocal<>();
     private final Appender appender;
     private final Level level;
@@ -47,7 +52,7 @@ public class AppenderControl extends AbstractFilterable {
      */
     public AppenderControl(final Appender appender, final Level level, final Filter filter) {
         super(filter);
-        this.appender = appender;
+        this.appender = Objects.requireNonNull(appender, "appender");
         this.appenderName = appender.getName();
         this.level = level;
         this.intLevel = level == null ? Level.ALL.intLevel() : level.intLevel();
@@ -154,10 +159,10 @@ public class AppenderControl extends AbstractFilterable {
     private void tryCallAppender(final LogEvent event) {
         try {
             appender.append(event);
-        } catch (final RuntimeException ex) {
-            handleAppenderError(event, ex);
-        } catch (final Exception ex) {
-            handleAppenderError(event, new AppenderLoggingException(ex));
+        } catch (final RuntimeException error) {
+            handleAppenderError(event, error);
+        } catch (final Throwable throwable) {
+            handleAppenderError(event, new AppenderLoggingException(throwable));
         }
     }
 

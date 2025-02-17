@@ -20,8 +20,7 @@
   <parent>
     <groupId>org.apache.logging.log4j</groupId>
     <artifactId>log4j</artifactId>
-    <version>2.13.3</version>
-    <relativePath>../</relativePath>
+    <version>2.19.0</version>
   </parent>
   <artifactId>log4j-jmx-gui</artifactId>
   <packaging>jar</packaging>
@@ -35,6 +34,7 @@
     <projectDir>/jmx-gui</projectDir>
     <jenkins.java.home>/home/jenkins/tools/java/latest1.7</jenkins.java.home>
     <module.name>org.apache.logging.log4j.jmx.gui</module.name>
+    <maven.doap.skip>true</maven.doap.skip>
   </properties>
   <dependencies>
     <dependency>
@@ -140,16 +140,8 @@
         </reportSets>
       </plugin>
       <plugin>
-        <groupId>org.codehaus.mojo</groupId>
-        <artifactId>findbugs-maven-plugin</artifactId>
-        <version>${findbugs.plugin.version}</version>
-        <configuration>
-          <fork>true</fork>
-          <jvmArgs>-Duser.language=en</jvmArgs>
-          <threshold>Normal</threshold>
-          <effort>Default</effort>
-          <excludeFilterFile>${log4jParentDir}/findbugs-exclude-filter.xml</excludeFilterFile>
-        </configuration>
+        <groupId>com.github.spotbugs</groupId>
+        <artifactId>spotbugs-maven-plugin</artifactId>
       </plugin>
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>

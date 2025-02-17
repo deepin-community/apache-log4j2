@@ -16,25 +16,23 @@
  */
 package org.apache.logging.log4j.util;
 
+import java.util.ArrayDeque;
+import java.util.Collections;
+import java.util.Deque;
 import java.util.List;
-import java.util.Stack;
-import java.util.function.Function;
+import java.util.function.Predicate;
 import java.util.stream.Collectors;
-import java.util.stream.Stream;
 
 /**
  * <em>Consider this class private.</em> Determines the caller's class.
  */
 public class StackLocator {
 
-    private final static StackWalker walker = StackWalker.getInstance(StackWalker.Option.RETAIN_CLASS_REFERENCE);
+    private final static StackWalker WALKER = StackWalker.getInstance(StackWalker.Option.RETAIN_CLASS_REFERENCE);
 
-    private final static StackWalker stackWalker = StackWalker.getInstance();
+    private final static StackWalker STACK_WALKER = StackWalker.getInstance();
 
     private final static StackLocator INSTANCE = new StackLocator();
-
-    private final static ThreadLocal<String> FQCN = new ThreadLocal<>();
-    private final static FqcnCallerLocator LOCATOR = new FqcnCallerLocator();
 
     public static StackLocator getInstance() {
         return INSTANCE;
@@ -43,68 +41,67 @@ public class StackLocator {
     private StackLocator() {
     }
 
+    public Class<?> getCallerClass(final Class<?> sentinelClass, final Predicate<Class<?>> callerPredicate) {
+        if (sentinelClass == null) {
+            throw new IllegalArgumentException("sentinelClass cannot be null");
+        }
+        if (callerPredicate == null) {
+            throw new IllegalArgumentException("callerPredicate cannot be null");
+        }
+        return WALKER.walk(s -> s
+                        .map(StackWalker.StackFrame::getDeclaringClass)
+                        // Skip until the sentinel class is found
+                        .dropWhile(clazz -> !sentinelClass.equals(clazz))
+                        // Skip until the predicate evaluates to true, also ignoring recurrences of the sentinel
+                        .dropWhile(clazz -> sentinelClass.equals(clazz) || !callerPredicate.test(clazz))
+                        .findFirst().orElse(null));
+    }
+
     public Class<?> getCallerClass(final String fqcn) {
         return getCallerClass(fqcn, "");
     }
 
     public Class<?> getCallerClass(final String fqcn, final String pkg) {
-        return walker.walk(s -> s.dropWhile(f -> !f.getClassName().equals(fqcn)).
-                dropWhile(f -> f.getClassName().equals(fqcn)).dropWhile(f -> !f.getClassName().startsWith(pkg)).
-                findFirst()).map(StackWalker.StackFrame::getDeclaringClass).orElse(null);
+        return WALKER.walk(s -> s
+                .dropWhile(f -> !f.getClassName().equals(fqcn))
+                .dropWhile(f -> f.getClassName().equals(fqcn))
+                .dropWhile(f -> !f.getClassName().startsWith(pkg))
+                .findFirst())
+                .map(StackWalker.StackFrame::getDeclaringClass)
+                .orElse(null);
     }
 
     public Class<?> getCallerClass(final Class<?> anchor) {
-        return walker.walk(s -> s.dropWhile(f -> !f.getDeclaringClass().equals(anchor)).
-                dropWhile(f -> f.getDeclaringClass().equals(anchor)).findFirst()).
-                map(StackWalker.StackFrame::getDeclaringClass).orElse(null);
+        return WALKER.walk(s -> s.dropWhile(f -> !f.getDeclaringClass().equals(anchor))
+                     .dropWhile(f -> f.getDeclaringClass().equals(anchor)).findFirst())
+                     .map(StackWalker.StackFrame::getDeclaringClass).orElse(null);
     }
 
     public Class<?> getCallerClass(final int depth) {
-        return walker.walk(s -> s.skip(depth).findFirst()).map(StackWalker.StackFrame::getDeclaringClass).orElse(null);
+        return WALKER.walk(s -> s.skip(depth).findFirst()).map(StackWalker.StackFrame::getDeclaringClass).orElse(null);
     }
 
-    public Stack<Class<?>> getCurrentStackTrace() {
+    public Deque<Class<?>> getCurrentStackTrace() {
         // benchmarks show that using the SecurityManager is much faster than looping through getCallerClass(int)
         if (PrivateSecurityManagerStackTraceUtil.isEnabled()) {
             return PrivateSecurityManagerStackTraceUtil.getCurrentStackTrace();
         }
-        Stack<Class<?>> stack = new Stack<Class<?>>();
-        List<Class<?>> classes = walker.walk(s -> s.map(f -> f.getDeclaringClass()).collect(Collectors.toList()));
-        stack.addAll(classes);
-        return stack;
+        final Deque<Class<?>> stack = new ArrayDeque<Class<?>>();
+        return WALKER.walk(s -> {
+            s.forEach(f -> stack.add(f.getDeclaringClass()));
+            return stack;
+        });
     }
 
     public StackTraceElement calcLocation(final String fqcnOfLogger) {
-        FQCN.set(fqcnOfLogger);
-        final StackWalker.StackFrame walk = walker.walk(LOCATOR);
-        final StackTraceElement element = walk == null ? null : walk.toStackTraceElement();
-        FQCN.set(null);
-        return element;
+        return STACK_WALKER.walk(
+                s -> s.dropWhile(f -> !f.getClassName().equals(fqcnOfLogger)) // drop the top frames until we reach the logger
+                      .dropWhile(f -> f.getClassName().equals(fqcnOfLogger)) // drop the logger frames
+                      .findFirst()).map(StackWalker.StackFrame::toStackTraceElement).orElse(null);
     }
 
     public StackTraceElement getStackTraceElement(final int depth) {
-        return stackWalker.walk(s -> s.skip(depth).findFirst()).get().toStackTraceElement();
-    }
-
-    static final class FqcnCallerLocator implements Function<Stream<StackWalker.StackFrame>, StackWalker.StackFrame> {
-
-        @Override
-        public StackWalker.StackFrame apply(Stream<StackWalker.StackFrame> stackFrameStream) {
-            String fqcn = FQCN.get();
-            boolean foundFqcn = false;
-            Object[] frames = stackFrameStream.toArray();
-            for (int i = 0; i < frames.length ; ++i) {
-                final String className = ((StackWalker.StackFrame) frames[i]).getClassName();
-                if (!foundFqcn) {
-                    // Skip frames until we find the FQCN
-                    foundFqcn = className.equals(fqcn);
-                } else if (!className.equals(fqcn)) {
-                    // The frame is no longer equal to the FQCN so it is the one we want.
-                    return (StackWalker.StackFrame) frames[i];
-                } // Otherwise it is equal to the FQCN so we need to skip it.
-            }
-            // Should never happen
-            return null;
-        }
+        return STACK_WALKER.walk(s -> s.skip(depth).findFirst())
+                .map(StackWalker.StackFrame::toStackTraceElement).orElse(null);
     }
 }

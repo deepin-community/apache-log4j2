@@ -101,7 +101,11 @@
       <SizeBasedTriggeringPolicy size="10MB" />
       <DefaultRolloverStrategy max="5"/>
     </RollingFile>-->
-    <Socket name="Elastic" host="\${sys:elastic.search.host:-localhost}" port="12222" protocol="tcp" bufferedIo="true" ignoreExceptions="false">
+    <Socket name="Elastic"
+            host="\${sys:logstash.search.host}"
+            port="12222"
+            protocol="tcp"
+            bufferedIo="true">
       <GelfLayout includeStackTrace="true" host="${hostName}" includeThreadContext="true" includeNullDelimiter="true"
                   compressionType="OFF">
         <ThreadContextIncludes>requestId,sessionId,loginId,userId,ipAddress,corpAcctNumber,callingHost,ohBehalfOf,onBehalfOfAccount</ThreadContextIncludes>

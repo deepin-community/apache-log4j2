@@ -20,9 +20,11 @@ import org.apache.logging.log4j.Level;
 import org.apache.logging.log4j.core.LogEvent;
 import org.apache.logging.log4j.message.Message;
 import org.apache.logging.log4j.message.SimpleMessage;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
-import static org.junit.Assert.*;
+import static org.junit.jupiter.api.Assertions.*;
+
+import java.util.concurrent.atomic.AtomicReference;
 
 /**
  * Tests the ReusableLogEventFactory class.
@@ -57,20 +59,20 @@ public class ReusableLogEventFactoryTest {
     public void testCreateEventOverwritesFields() throws Exception {
         final ReusableLogEventFactory factory = new ReusableLogEventFactory();
         final LogEvent event1 = callCreateEvent(factory, "a", Level.DEBUG, new SimpleMessage("abc"), null);
-        assertEquals("logger", "a", event1.getLoggerName());
-        assertEquals("level", Level.DEBUG, event1.getLevel());
-        assertEquals("msg", new SimpleMessage("abc"), event1.getMessage());
+        assertEquals("a", event1.getLoggerName(), "logger");
+        assertEquals(Level.DEBUG, event1.getLevel(), "level");
+        assertEquals(new SimpleMessage("abc"), event1.getMessage(), "msg");
 
         ReusableLogEventFactory.release(event1);
         final LogEvent event2 = callCreateEvent(factory, "b", Level.INFO, new SimpleMessage("xyz"), null);
         assertSame(event1, event2);
 
-        assertEquals("logger", "b", event1.getLoggerName());
-        assertEquals("level", Level.INFO, event1.getLevel());
-        assertEquals("msg", new SimpleMessage("xyz"), event1.getMessage());
-        assertEquals("logger", "b", event2.getLoggerName());
-        assertEquals("level", Level.INFO, event2.getLevel());
-        assertEquals("msg", new SimpleMessage("xyz"), event2.getMessage());
+        assertEquals("b", event1.getLoggerName(), "logger");
+        assertEquals(Level.INFO, event1.getLevel(), "level");
+        assertEquals(new SimpleMessage("xyz"), event1.getMessage(), "msg");
+        assertEquals("b", event2.getLoggerName(), "logger");
+        assertEquals(Level.INFO, event2.getLevel(), "level");
+        assertEquals(new SimpleMessage("xyz"), event2.getMessage(), "msg");
     }
 
     private LogEvent callCreateEvent(final ReusableLogEventFactory factory, final String logger, final Level level,
@@ -81,40 +83,40 @@ public class ReusableLogEventFactoryTest {
     @Test
     public void testCreateEventReturnsThreadLocalInstance() throws Exception {
         final ReusableLogEventFactory factory = new ReusableLogEventFactory();
-        final LogEvent[] event1 = new LogEvent[1];
-        final LogEvent[] event2 = new LogEvent[1];
+        final AtomicReference<LogEvent> event1 = new AtomicReference<>();
+        final AtomicReference<LogEvent> event2 = new AtomicReference<>();
         final Thread t1 = new Thread("THREAD 1") {
             @Override
             public void run() {
-                event1[0] = callCreateEvent(factory, "a", Level.DEBUG, new SimpleMessage("abc"), null);
+                event1.set(callCreateEvent(factory, "a", Level.DEBUG, new SimpleMessage("abc"), null));
             }
         };
         final Thread t2 = new Thread("Thread 2") {
             @Override
             public void run() {
-                event2[0] = callCreateEvent(factory, "b", Level.INFO, new SimpleMessage("xyz"), null);
+                event2.set(callCreateEvent(factory, "b", Level.INFO, new SimpleMessage("xyz"), null));
             }
         };
         t1.start();
         t2.start();
         t1.join();
         t2.join();
-        assertNotNull(event1[0]);
-        assertNotNull(event2[0]);
-        assertNotSame(event1[0], event2[0]);
-        assertEquals("logger", "a", event1[0].getLoggerName());
-        assertEquals("level", Level.DEBUG, event1[0].getLevel());
-        assertEquals("msg", new SimpleMessage("abc"), event1[0].getMessage());
-        assertEquals("thread name", "THREAD 1", event1[0].getThreadName());
-        assertEquals("tid", t1.getId(), event1[0].getThreadId());
+        assertNotNull(event1.get());
+        assertNotNull(event2.get());
+        assertNotSame(event1.get(), event2.get());
+        assertEquals("a", event1.get().getLoggerName(), "logger");
+        assertEquals(Level.DEBUG, event1.get().getLevel(), "level");
+        assertEquals(new SimpleMessage("abc"), event1.get().getMessage(), "msg");
+        assertEquals("THREAD 1", event1.get().getThreadName(), "thread name");
+        assertEquals(t1.getId(), event1.get().getThreadId(), "tid");
 
-        assertEquals("logger", "b", event2[0].getLoggerName());
-        assertEquals("level", Level.INFO, event2[0].getLevel());
-        assertEquals("msg", new SimpleMessage("xyz"), event2[0].getMessage());
-        assertEquals("thread name", "Thread 2", event2[0].getThreadName());
-        assertEquals("tid", t2.getId(), event2[0].getThreadId());
-        ReusableLogEventFactory.release(event1[0]);
-        ReusableLogEventFactory.release(event2[0]);
+        assertEquals("b", event2.get().getLoggerName(), "logger");
+        assertEquals(Level.INFO, event2.get().getLevel(), "level");
+        assertEquals(new SimpleMessage("xyz"), event2.get().getMessage(), "msg");
+        assertEquals("Thread 2", event2.get().getThreadName(), "thread name");
+        assertEquals(t2.getId(), event2.get().getThreadId(), "tid");
+        ReusableLogEventFactory.release(event1.get());
+        ReusableLogEventFactory.release(event2.get());
     }
 
     @SuppressWarnings("deprecation")

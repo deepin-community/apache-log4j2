@@ -32,6 +32,8 @@ import org.apache.logging.log4j.util.Strings;
  */
 public class DefaultThreadContextStack implements ThreadContextStack, StringBuilderFormattable {
 
+    private static final Object[] EMPTY_OBJECT_ARRAY = {};
+
     private static final long serialVersionUID = 5050501L;
 
     private static final ThreadLocal<MutableThreadContextStack> STACK = new ThreadLocal<>();
@@ -170,7 +172,7 @@ public class DefaultThreadContextStack implements ThreadContextStack, StringBuil
     @Override
     public String peek() {
         final MutableThreadContextStack values = STACK.get();
-        if (values == null || values.size() == 0) {
+        if (values == null || values.isEmpty()) {
             return Strings.EMPTY;
         }
         return values.peek();
@@ -182,7 +184,7 @@ public class DefaultThreadContextStack implements ThreadContextStack, StringBuil
             return Strings.EMPTY;
         }
         final MutableThreadContextStack values = STACK.get();
-        if (values == null || values.size() == 0) {
+        if (values == null || values.isEmpty()) {
             // Like version 1.2
             return Strings.EMPTY;
         }
@@ -207,7 +209,7 @@ public class DefaultThreadContextStack implements ThreadContextStack, StringBuil
             return false;
         }
         final MutableThreadContextStack values = STACK.get();
-        if (values == null || values.size() == 0) {
+        if (values == null || values.isEmpty()) {
             return false;
         }
         final MutableThreadContextStack copy = (MutableThreadContextStack) values.copy();
@@ -259,9 +261,9 @@ public class DefaultThreadContextStack implements ThreadContextStack, StringBuil
     public Object[] toArray() {
         final MutableThreadContextStack result = STACK.get();
         if (result == null) {
-            return new String[0];
+            return Strings.EMPTY_ARRAY;
         }
-        return result.toArray(new Object[result.size()]);
+        return result.toArray(EMPTY_OBJECT_ARRAY);
     }
 
     @Override

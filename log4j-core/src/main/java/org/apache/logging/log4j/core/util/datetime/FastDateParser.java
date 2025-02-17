@@ -39,6 +39,8 @@ import java.util.concurrent.ConcurrentMap;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import org.apache.logging.log4j.core.util.Integers;
+
 /**
  * <p>FastDateParser is a fast and thread-safe version of
  * {@link java.text.SimpleDateFormat}.</p>
@@ -98,12 +100,7 @@ public class FastDateParser implements DateParser, Serializable {
     // comparator used to sort regex alternatives
     // alternatives should be ordered longer first, and shorter last. ('february' before 'feb')
     // all entries must be lowercase by locale.
-    private static final Comparator<String> LONGER_FIRST_LOWERCASE = new Comparator<String>() {
-        @Override
-        public int compare(final String left, final String right) {
-            return right.compareTo(left);
-        }
-    };
+    private static final Comparator<String> LONGER_FIRST_LOWERCASE = (left, right) -> right.compareTo(left);
 
     /**
      * <p>Constructs a new FastDateParser.</p>
@@ -780,7 +777,7 @@ public class FastDateParser implements DateParser, Serializable {
                 return false;
             }
 
-            final int value = Integer.parseInt(source.substring(pos.getIndex(), idx));
+            final int value = Integers.parseInt(source.substring(pos.getIndex(), idx));
             pos.setIndex(idx);
 
             calendar.set(field, modify(parser, value));

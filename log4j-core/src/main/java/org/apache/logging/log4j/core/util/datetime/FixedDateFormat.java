@@ -139,7 +139,17 @@ public class FixedDateFormat {
         /**
          * ISO8601 time format with support for microsecond precision: {@code "yyyy-MM-dd'T'HH:mm:ss.nnnnnn"}.
          */
-        ISO8601_PERIOD_MICROS("yyyy-MM-dd'T'HH:mm:ss.nnnnnn", "yyyy-MM-dd'T'", 2, ':', 1, '.', 1, 6, null);
+        ISO8601_PERIOD_MICROS("yyyy-MM-dd'T'HH:mm:ss.nnnnnn", "yyyy-MM-dd'T'", 2, ':', 1, '.', 1, 6, null),
+
+        /**
+         * American date/time format with 2-digit year: {@code "dd/MM/yy HH:mm:ss.SSS"}.
+         */
+        US_MONTH_DAY_YEAR2_TIME("dd/MM/yy HH:mm:ss.SSS", "dd/MM/yy ", 0, ':', 1, '.', 1, 3, null),
+
+        /**
+         * American date/time format with 4-digit year: {@code "dd/MM/yyyy HH:mm:ss.SSS"}.
+         */
+        US_MONTH_DAY_YEAR4_TIME("dd/MM/yyyy HH:mm:ss.SSS", "dd/MM/yyyy ", 0, ':', 1, '.', 1, 3, null);
 
         private static final String DEFAULT_SECOND_FRACTION_PATTERN = "SSS";
         private static final int MILLI_FRACTION_DIGITS = DEFAULT_SECOND_FRACTION_PATTERN.length();
@@ -388,8 +398,8 @@ public class FixedDateFormat {
     private final int millisSeparatorLength;
     private final FixedTimeZoneFormat fixedTimeZoneFormat;
 
-    private volatile long midnightToday = 0;
-    private volatile long midnightTomorrow = 0;
+    private volatile long midnightToday;
+    private volatile long midnightTomorrow;
     private final int[] dstOffsets = new int[25];
 
     // cachedDate does not need to be volatile because
@@ -452,13 +462,13 @@ public class FixedDateFormat {
         }
 
         final String option0 = options[0];
-        final FixedFormat withNanos = FixedFormat.lookupIgnoringNanos(option0);
-        if (withNanos != null) {
+        final FixedFormat withoutNanos = FixedFormat.lookupIgnoringNanos(option0);
+        if (withoutNanos != null) {
             final int[] nanoRange = FixedFormat.nanoRange(option0);
             final int nanoStart = nanoRange[0];
             final int nanoEnd = nanoRange[1];
             final int secondFractionDigits = nanoEnd - nanoStart;
-            return new FixedDateFormat(withNanos, tz, secondFractionDigits);
+            return new FixedDateFormat(withoutNanos, tz, secondFractionDigits);
         }
         final FixedFormat type = FixedFormat.lookup(option0);
         return type == null ? null : new FixedDateFormat(type, tz);
@@ -698,5 +708,20 @@ public class FixedDateFormat {
 
     private int daylightSavingTime(final int hourOfDay) {
         return hourOfDay > 23 ? dstOffsets[23] : dstOffsets[hourOfDay];
+    }
+
+    /**
+     * Returns {@code true} if the old and new date values will result in the same formatted output, {@code false}
+     * if results <i>may</i> differ.
+     */
+    public boolean isEquivalent(long oldEpochSecond, int oldNanoOfSecond, long epochSecond, int nanoOfSecond) {
+        if (oldEpochSecond == epochSecond) {
+            if (secondFractionDigits <= 3) {
+                // Convert nanos to milliseconds for comparison if the format only requires milliseconds.
+                return (oldNanoOfSecond / 1000_000L) == (nanoOfSecond / 1000_000L);
+            }
+            return oldNanoOfSecond == nanoOfSecond;
+        }
+        return false;
     }
 }

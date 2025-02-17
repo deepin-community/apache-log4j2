@@ -44,15 +44,14 @@ import org.apache.logging.log4j.util.PerformanceSensitive;
 @PerformanceSensitive("allocation")
 public final class CompositeFilter extends AbstractLifeCycle implements Iterable<Filter>, Filter {
 
-    private static final Filter[] EMPTY_FILTERS = new Filter[0];
     private final Filter[] filters;
 
     private CompositeFilter() {
-        this.filters = EMPTY_FILTERS;
+        this.filters = Filter.EMPTY_ARRAY;
     }
 
     private CompositeFilter(final Filter[] filters) {
-        this.filters = filters == null ? EMPTY_FILTERS : filters;
+        this.filters = filters == null ? Filter.EMPTY_ARRAY : filters;
     }
 
     public CompositeFilter addFilter(final Filter filter) {
@@ -61,12 +60,9 @@ public final class CompositeFilter extends AbstractLifeCycle implements Iterable
             return this;
         }
         if (filter instanceof CompositeFilter) {
-            final int size = this.filters.length + ((CompositeFilter) filter).size();
-            final Filter[] copy = Arrays.copyOf(this.filters, size);
-            final int index = this.filters.length;
-            for (final Filter currentFilter : ((CompositeFilter) filter).filters) {
-                copy[index] = currentFilter;
-            }
+            final CompositeFilter compositeFilter = (CompositeFilter) filter;
+            final Filter[] copy = Arrays.copyOf(this.filters, this.filters.length + compositeFilter.size());
+            System.arraycopy(compositeFilter.filters, 0, copy, this.filters.length, compositeFilter.filters.length);
             return new CompositeFilter(copy);
         }
         final Filter[] copy = Arrays.copyOf(this.filters, this.filters.length + 1);
@@ -90,7 +86,7 @@ public final class CompositeFilter extends AbstractLifeCycle implements Iterable
         } else {
             filterList.remove(filter);
         }
-        return new CompositeFilter(filterList.toArray(new Filter[this.filters.length - 1]));
+        return new CompositeFilter(filterList.toArray(Filter.EMPTY_ARRAY));
     }
 
     @Override

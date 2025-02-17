@@ -16,9 +16,9 @@
  */
 package org.apache.logging.log4j.message;
 
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
-import static org.junit.Assert.*;
+import static org.junit.jupiter.api.Assertions.*;
 
 /**
  *
@@ -82,11 +82,12 @@ public class StructuredDataMessageTest {
         assertEquals(expected, result);
     }
 
-    @Test(expected = IllegalArgumentException.class)
+    @Test
     public void testMsgWithKeyTooLong() {
         final String testMsg = "Test message {}";
         final StructuredDataMessage msg = new StructuredDataMessage("MsgId@12345", testMsg, "Alert");
-        msg.put("This is a very long key that will violate the key length validation", "Testing");
+        assertThrows(IllegalArgumentException.class, () ->
+                msg.put("This is a very long key that will violate the key length validation", "Testing"));
     }
 
     @Test
@@ -107,4 +108,12 @@ public class StructuredDataMessageTest {
         final String expected2 = "Alert [MsgId@1 memo=\"Added later\" message=\"Test message {}\" project=\"Log4j\"] Test message {}";
         assertEquals(expected2, result2);
     }
+
+    @Test
+    public void testEnterpriseNoAsOidFragment() {
+        final String testMsg = "Test message {}";
+        final StructuredDataMessage structuredDataMessage = new StructuredDataMessage("XX_DATA@1234.55.6.7", testMsg, "Nothing");
+        assertNotNull(structuredDataMessage);
+    }
+
 }

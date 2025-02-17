@@ -34,7 +34,7 @@ import org.junit.Test;
 public class VelocityTest {
 
 private static LoggerContext context;
-    
+
     @BeforeClass
     public static void setupClass() {
         context = LoggerContext.getContext(false);
@@ -44,13 +44,13 @@ private static LoggerContext context;
     public static void tearDownClass() {
         Configurator.shutdown(context);
         StatusLogger.getLogger().reset();
-    }    
-    
+    }
+
     @Test
     public void testVelocity() {
         Velocity.init();
         final VelocityContext vContext = new VelocityContext();
-        vContext.put("name", new String("Velocity"));
+        vContext.put("name", "Velocity");
 
         final Template template = Velocity.getTemplate("target/test-classes/hello.vm");
 

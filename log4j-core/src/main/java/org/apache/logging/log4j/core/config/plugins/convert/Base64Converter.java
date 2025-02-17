@@ -21,6 +21,7 @@ import java.lang.reflect.Method;
 
 import org.apache.logging.log4j.Logger;
 import org.apache.logging.log4j.status.StatusLogger;
+import org.apache.logging.log4j.util.Constants;
 import org.apache.logging.log4j.util.LoaderUtil;
 
 /**
@@ -40,14 +41,9 @@ public class Base64Converter {
             decoder = getDecoder.invoke(null, (Object[]) null);
             clazz = decoder.getClass();
             method = clazz.getMethod("decode", String.class);
-        } catch (final ClassNotFoundException ex) {
-
-        } catch (final NoSuchMethodException ex) {
-
-        } catch (final IllegalAccessException ex) {
-
-        } catch (final InvocationTargetException ex) {
-
+        } catch (final ClassNotFoundException | NoSuchMethodException | IllegalAccessException |
+            InvocationTargetException ex) {
+            // ignore
         }
         if (method == null) {
             try {
@@ -68,12 +64,10 @@ public class Base64Converter {
         } else {
             try {
                 return (byte[]) method.invoke(decoder, encoded);
-            } catch (final IllegalAccessException ex) {
-                LOGGER.error("Error decoding string - " + ex.getMessage());
-            } catch (final InvocationTargetException ex) {
+            } catch (final IllegalAccessException | InvocationTargetException ex) {
                 LOGGER.error("Error decoding string - " + ex.getMessage());
             }
         }
-        return new byte[0];
+        return Constants.EMPTY_BYTE_ARRAY;
     }
 }

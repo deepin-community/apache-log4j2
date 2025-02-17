@@ -16,6 +16,14 @@
  */
 package org.apache.log4j.config;
 
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertTrue;
+
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
 import org.apache.log4j.ListAppender;
 import org.apache.log4j.LogManager;
 import org.apache.log4j.Logger;
@@ -29,14 +37,6 @@ import org.apache.logging.log4j.core.config.ConfigurationFactory;
 import org.junit.After;
 import org.junit.BeforeClass;
 import org.junit.Test;
-
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertTrue;
 
 /**
  * Test RewriteAppender
@@ -54,7 +54,7 @@ public class MapRewriteAppenderTest {
     }
 
     @Test
-    public void testRewrite() throws Exception {
+    public void testRewrite() {
         Logger logger = LogManager.getLogger("test");
         Map<String, String> map = new HashMap<>();
         map.put("message", "This is a test");

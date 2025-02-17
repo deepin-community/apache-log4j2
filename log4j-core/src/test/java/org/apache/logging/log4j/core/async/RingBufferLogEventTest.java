@@ -32,7 +32,6 @@ import org.apache.logging.log4j.categories.AsyncLoggers;
 import org.apache.logging.log4j.core.LogEvent;
 import org.apache.logging.log4j.core.util.DummyNanoClock;
 import org.apache.logging.log4j.core.time.internal.FixedPreciseClock;
-import org.apache.logging.log4j.message.ParameterConsumer;
 import org.apache.logging.log4j.message.ReusableMessageFactory;
 import org.apache.logging.log4j.util.FilteredObjectInputStream;
 import org.apache.logging.log4j.util.StringMap;
@@ -57,6 +56,34 @@ public class RingBufferLogEventTest {
     public void testToImmutable() {
         final LogEvent logEvent = new RingBufferLogEvent();
         Assert.assertNotSame(logEvent, logEvent.toImmutable());
+    }
+
+    /**
+     * @see <a href="https://issues.apache.org/jira/browse/LOG4J2-2816">LOG4J2-2816</a>
+     */
+    @Test
+    public void testIsPopulated() {
+        final RingBufferLogEvent evt = new RingBufferLogEvent();
+
+        assertFalse(evt.isPopulated());
+
+        final String loggerName = null;
+        final Marker marker = null;
+        final String fqcn = null;
+        final Level level = null;
+        final Message data = null;
+        final Throwable t = null;
+        final ContextStack contextStack = null;
+        final String threadName = null;
+        final StackTraceElement location = null;
+        evt.setValues(null, loggerName, marker, fqcn, level, data, t, (StringMap) evt.getContextData(),
+                contextStack, -1, threadName, -1, location, new FixedPreciseClock(), new DummyNanoClock(1));
+
+        assertTrue(evt.isPopulated());
+
+        evt.clear();
+
+        assertFalse(evt.isPopulated());
     }
 
     @Test
@@ -253,11 +280,6 @@ public class RingBufferLogEventTest {
     @Test
     public void testForEachParameterNothingSet() {
         final RingBufferLogEvent evt = new RingBufferLogEvent();
-        evt.forEachParameter(new ParameterConsumer<Void>() {
-            @Override
-            public void accept(final Object parameter, final int parameterIndex, final Void state) {
-                fail("Should not have been called");
-            }
-        }, null);
+        evt.forEachParameter((parameter, parameterIndex, state) -> fail("Should not have been called"), null);
     }
 }

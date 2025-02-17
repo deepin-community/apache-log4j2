@@ -19,15 +19,6 @@
 
 package org.apache.log4j.config;
 
-import org.apache.log4j.Appender;
-import org.apache.log4j.Level;
-import org.apache.log4j.Priority;
-import org.apache.log4j.spi.ErrorHandler;
-import org.apache.log4j.spi.OptionHandler;
-import org.apache.logging.log4j.Logger;
-import org.apache.logging.log4j.core.util.OptionConverter;
-import org.apache.logging.log4j.status.StatusLogger;
-
 import java.beans.BeanInfo;
 import java.beans.IntrospectionException;
 import java.beans.Introspector;
@@ -36,6 +27,15 @@ import java.io.InterruptedIOException;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.util.Properties;
+
+import org.apache.log4j.Appender;
+import org.apache.log4j.Level;
+import org.apache.log4j.Priority;
+import org.apache.log4j.spi.ErrorHandler;
+import org.apache.log4j.spi.OptionHandler;
+import org.apache.logging.log4j.Logger;
+import org.apache.logging.log4j.core.util.OptionConverter;
+import org.apache.logging.log4j.status.StatusLogger;
 
 /**
  * General purpose Object property setter. Clients repeatedly invokes
@@ -56,6 +56,7 @@ import java.util.Properties;
  * Otherwise an {@link IntrospectionException} are thrown.
  */
 public class PropertySetter {
+    private static final PropertyDescriptor[] EMPTY_PROPERTY_DESCRIPTOR_ARRAY = {};
     private static Logger LOGGER = StatusLogger.getLogger();
     protected Object obj;
     protected PropertyDescriptor[] props;
@@ -93,7 +94,7 @@ public class PropertySetter {
             props = bi.getPropertyDescriptors();
         } catch (IntrospectionException ex) {
             LOGGER.error("Failed to introspect {}: {}", obj, ex.getMessage());
-            props = new PropertyDescriptor[0];
+            props = EMPTY_PROPERTY_DESCRIPTOR_ARRAY;
         }
     }
 
@@ -264,7 +265,7 @@ public class PropertySetter {
                 return Boolean.FALSE;
             }
         } else if (Priority.class.isAssignableFrom(type)) {
-            return org.apache.log4j.helpers.OptionConverter.toLevel(v, Level.DEBUG);
+            return org.apache.log4j.helpers.OptionConverter.toLevel(v, Log4j1Configuration.DEFAULT_LEVEL);
         } else if (ErrorHandler.class.isAssignableFrom(type)) {
             return OptionConverter.instantiateByClassName(v,
                     ErrorHandler.class, null);

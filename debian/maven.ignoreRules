@@ -12,15 +12,18 @@ ch.qos.logback logback-classic * * * *
 ch.qos.logback logback-core * * * *
 de.flapdoodle.embed de.flapdoodle.embed.mongo * * * *
 com.datastax.cassandra cassandra-driver-core * * * *
+com.github.spotbugs:spotbugs-maven-plugin * * * *
 com.github.tomakehurst wiremock * * * *
 com.google.code.java-allocation-instrumenter java-allocation-instrumenter * * * *
 com.h2database h2 * * * *
 commons-httpclient commons-httpclient * * * *
 javax.jmdns jmdns * * * *
 junit junit * * * *
+org.junit junit-bom * * * *
 log4j log4j * * * *
 net.javacrumbs.json-unit json-unit * * * *
 org.apache.activemq activemq-broker * * * *
+org.apache.felix maven-scr-plugin * * * *
 org.apache.felix org.apache.felix.framework * * * *
 org.apache.kafka kafka-clients * * * *
 org.apache.maven maven-core * * * *
@@ -40,7 +43,6 @@ org.apache.velocity velocity * * * *
 org.codehaus.groovy groovy-dateutil * * * *
 org.codehaus.mojo clirr-maven-plugin * * * *
 org.codehaus.mojo cobertura-maven-plugin * * * *
-org.codehaus.mojo findbugs-maven-plugin * * * *
 org.codehaus.woodstox woodstox-core-asl * * * *
 org.easymock easymock * * * *
 org.eclipse.tycho org.eclipse.osgi * * * *
@@ -55,3 +57,11 @@ org.slf4j slf4j-ext * * * *
 org.springframework spring-test * * * *
 org.tukaani xz * * * *
 org.xmlunit * * * *
+org.assertj assertj-core * * * *
+org.hamcrest hamcrest * * * *
+org.mockito mockito-junit-jupiter * * * *
+org.awaitility awaitility * * * *
+org.zapodot embedded-ldap-junit * * * *
+org.junit-pioneer junit-pioneer * * * *
+com.google.guava guava-testlib * * * *
+uk.org.webcompere system-stubs-jupiter * * * *

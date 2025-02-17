@@ -41,8 +41,10 @@ public class EncodingListAppender extends ListAppender {
         super(name, filter, layout, newline, raw);
     }
 
-    private class Destination implements ByteBufferDestination {
-        ByteBuffer byteBuffer = ByteBuffer.wrap(new byte[4096]);
+    private static class Destination implements ByteBufferDestination {
+        // JUnit 5 stack traces can start to get looooong
+        ByteBuffer byteBuffer = ByteBuffer.wrap(new byte[16384]);
+
         @Override
         public ByteBuffer getByteBuffer() {
             return byteBuffer;
@@ -50,7 +52,7 @@ public class EncodingListAppender extends ListAppender {
 
         @Override
         public ByteBuffer drain(final ByteBuffer buf) {
-            throw new IllegalStateException("Unexpected message larger than 4096 bytes");
+            throw new IllegalStateException("Unexpected message larger than 16384 bytes");
         }
 
         @Override

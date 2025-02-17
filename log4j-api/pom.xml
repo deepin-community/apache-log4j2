@@ -20,8 +20,7 @@
   <parent>
     <groupId>org.apache.logging.log4j</groupId>
     <artifactId>log4j</artifactId>
-    <version>2.13.3</version>
-    <relativePath>../</relativePath>
+    <version>2.19.0</version>
   </parent>
   <artifactId>log4j-api</artifactId>
   <packaging>jar</packaging>
@@ -31,14 +30,9 @@
     <log4jParentDir>${basedir}/..</log4jParentDir>
     <docLabel>API Documentation</docLabel>
     <projectDir>/api</projectDir>
+    <maven.doap.skip>true</maven.doap.skip>
   </properties>
   <dependencies>
-    <dependency>
-      <groupId>org.apache.logging.log4j</groupId>
-      <artifactId>log4j-api-java9</artifactId>
-      <scope>provided</scope>
-      <type>zip</type>
-    </dependency>
     <!-- Place Felix before Equinox because Felix is signed. / also place it before org.osgi.core so that its versions of the OSGi classes are used -->
     <dependency>
       <groupId>org.apache.felix</groupId>
@@ -51,8 +45,33 @@
       <scope>provided</scope>
     </dependency>
     <dependency>
-      <groupId>junit</groupId>
-      <artifactId>junit</artifactId>
+      <groupId>org.junit.vintage</groupId>
+      <artifactId>junit-vintage-engine</artifactId>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.junit.jupiter</groupId>
+      <artifactId>junit-jupiter-migrationsupport</artifactId>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.junit.jupiter</groupId>
+      <artifactId>junit-jupiter-params</artifactId>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.junit.jupiter</groupId>
+      <artifactId>junit-jupiter-engine</artifactId>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>uk.org.webcompere</groupId>
+      <artifactId>system-stubs-jupiter</artifactId>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.assertj</groupId>
+      <artifactId>assertj-core</artifactId>
       <scope>test</scope>
     </dependency>
     <dependency>
@@ -82,13 +101,18 @@
       <artifactId>jackson-databind</artifactId>
       <scope>test</scope>
     </dependency>
+    <dependency>
+      <groupId>org.junit-pioneer</groupId>
+      <artifactId>junit-pioneer</artifactId>
+      <scope>test</scope>
+    </dependency>
   </dependencies>
   <build>
     <plugins>
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-dependency-plugin</artifactId>
-        <version>3.0.2</version>
+        <version>3.3.0</version>
         <executions>
           <execution>
             <id>unpack-classes</id>
@@ -118,7 +142,7 @@
       <plugin>
         <groupId>org.codehaus.mojo</groupId>
         <artifactId>build-helper-maven-plugin</artifactId>
-        <version>1.7</version>
+        <version>3.3.0</version>
         <executions>
           <execution>
             <id>add-source</id>
@@ -147,6 +171,22 @@
             </configuration>
           </execution>
         </executions>
+      </plugin>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-surefire-plugin</artifactId>
+        <configuration>
+          <properties>
+            <configurationParameters>
+              <!-- LOG4J2-2921: use parallel test execution by default -->
+              junit.jupiter.execution.parallel.enabled = true
+              junit.jupiter.execution.parallel.mode.default = concurrent
+            </configurationParameters>
+          </properties>
+          <reuseForks>true</reuseForks>
+          <redirectTestOutputToFile>true</redirectTestOutputToFile>
+          <excludedGroups>performance,smoke</excludedGroups>
+        </configuration>
       </plugin>
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
@@ -182,7 +222,7 @@
             </goals>
             <configuration>
               <archive>
-                <manifestFile>${manifestfile}</manifestFile>
+                <manifestFile>${project.build.testOutputDirectory}/META-INF/MANIFEST.MF</manifestFile>
                 <manifestEntries>
                   <Specification-Title>${project.name}</Specification-Title>
                   <Specification-Version>${project.version}</Specification-Version>
@@ -217,17 +257,48 @@
       <plugin>
         <groupId>org.apache.felix</groupId>
         <artifactId>maven-bundle-plugin</artifactId>
-        <configuration>
-          <instructions>
-            <Export-Package>org.apache.logging.log4j.*</Export-Package>
-            <Import-Package>
-              sun.reflect;resolution:=optional,
-              *
-            </Import-Package>
-            <Bundle-Activator>org.apache.logging.log4j.util.Activator</Bundle-Activator>
-            <_fixupmessages>"Classes found in the wrong directory";is:=warning</_fixupmessages>
-          </instructions>
-        </configuration>
+        <executions>
+          <execution>
+            <id>default-manifest</id>
+            <phase>process-classes</phase>
+            <goals>
+              <goal>manifest</goal>
+            </goals>
+            <configuration>
+              <instructions>
+                <Export-Package>org.apache.logging.log4j.*</Export-Package>
+                <Import-Package>
+                  sun.reflect;resolution:=optional,
+                  *
+                </Import-Package>
+                <Bundle-Activator>org.apache.logging.log4j.util.Activator</Bundle-Activator>
+                <_fixupmessages>"Classes found in the wrong directory";is:=warning</_fixupmessages>
+              </instructions>
+            </configuration>
+          </execution>
+          <execution>
+            <id>default-test-manifest</id>
+            <phase>process-test-classes</phase>
+            <goals>
+              <goal>manifest</goal>
+            </goals>
+            <configuration>
+              <classifier>tests</classifier>
+              <outputDirectory>${project.build.testOutputDirectory}</outputDirectory>
+              <manifestLocation>${project.build.testOutputDirectory}/META-INF</manifestLocation>
+              <instructions>
+                <Bundle-SymbolicName>${maven-symbolicname}.tests</Bundle-SymbolicName>
+                <Fragment-Host>org.apache.logging.log4j.api</Fragment-Host>
+                <Export-Package>org.apache.logging.log4j.*</Export-Package>
+                <Import-Package />
+              </instructions>
+            </configuration>
+          </execution>
+        </executions>
+      </plugin>
+      <plugin>
+        <groupId>org.apache.felix</groupId>
+        <artifactId>maven-scr-plugin</artifactId>
       </plugin>
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
@@ -294,16 +365,8 @@
         </reportSets>
       </plugin>
       <plugin>
-        <groupId>org.codehaus.mojo</groupId>
-        <artifactId>findbugs-maven-plugin</artifactId>
-        <version>${findbugs.plugin.version}</version>
-        <configuration>
-          <fork>true</fork>
-          <jvmArgs>-Duser.language=en</jvmArgs>
-          <threshold>Normal</threshold>
-          <effort>Default</effort>
-          <excludeFilterFile>${log4jParentDir}/findbugs-exclude-filter.xml</excludeFilterFile>
-        </configuration>
+        <groupId>com.github.spotbugs</groupId>
+        <artifactId>spotbugs-maven-plugin</artifactId>
       </plugin>
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>

@@ -16,8 +16,16 @@
  */
 package org.apache.logging.log4j.core.layout;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
+
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 import java.util.Locale;
 
@@ -29,23 +37,28 @@ import org.apache.logging.log4j.core.BasicConfigurationFactory;
 import org.apache.logging.log4j.core.Logger;
 import org.apache.logging.log4j.core.LoggerContext;
 import org.apache.logging.log4j.core.config.ConfigurationFactory;
+import org.apache.logging.log4j.core.config.DefaultConfiguration;
+import org.apache.logging.log4j.core.config.Node;
+import org.apache.logging.log4j.core.config.plugins.util.PluginBuilder;
+import org.apache.logging.log4j.core.config.plugins.util.PluginManager;
+import org.apache.logging.log4j.core.config.plugins.util.PluginType;
 import org.apache.logging.log4j.core.net.Facility;
+import org.apache.logging.log4j.core.util.Integers;
 import org.apache.logging.log4j.core.util.KeyValuePair;
-import org.apache.logging.log4j.junit.ThreadContextRule;
+import org.apache.logging.log4j.junit.UsingAnyThreadContext;
 import org.apache.logging.log4j.message.StructuredDataCollectionMessage;
 import org.apache.logging.log4j.message.StructuredDataMessage;
 import org.apache.logging.log4j.status.StatusLogger;
 import org.apache.logging.log4j.test.appender.ListAppender;
 import org.apache.logging.log4j.util.ProcessIdUtil;
 import org.apache.logging.log4j.util.Strings;
-import org.junit.AfterClass;
-import org.junit.Assert;
-import org.junit.BeforeClass;
-import org.junit.Rule;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 
-import static org.junit.Assert.*;
-
+@UsingAnyThreadContext
 public class Rfc5424LayoutTest {
     LoggerContext ctx = LoggerContext.getContext();
     Logger root = ctx.getRootLogger();
@@ -72,10 +85,7 @@ public class Rfc5424LayoutTest {
 
     static ConfigurationFactory cf = new BasicConfigurationFactory();
 
-    @Rule
-    public final ThreadContextRule threadContextRule = new ThreadContextRule();
-
-    @BeforeClass
+    @BeforeAll
     public static void setupClass() {
         StatusLogger.getLogger().setLevel(Level.OFF);
         ConfigurationFactory.setConfigurationFactory(cf);
@@ -83,7 +93,7 @@ public class Rfc5424LayoutTest {
         ctx.reconfigure();
     }
 
-    @AfterClass
+    @AfterAll
     public static void cleanupClass() {
         ConfigurationFactory.removeConfigurationFactory(cf);
     }
@@ -130,10 +140,10 @@ public class Rfc5424LayoutTest {
 
             List<String> list = appender.getMessages();
 
-            assertTrue("Expected line 1 to end with: " + line1 + " Actual " + list.get(0), list.get(0).endsWith(line1));
-            assertTrue("Expected line 2 to end with: " + line2 + " Actual " + list.get(1), list.get(1).endsWith(line2));
-            assertTrue("Expected line 3 to end with: " + line3 + " Actual " + list.get(2), list.get(2).endsWith(line3));
-            assertTrue("Expected line 4 to end with: " + line4 + " Actual " + list.get(3), list.get(3).endsWith(line4));
+            assertTrue(list.get(0).endsWith(line1), "Expected line 1 to end with: " + line1 + " Actual " + list.get(0));
+            assertTrue(list.get(1).endsWith(line2), "Expected line 2 to end with: " + line2 + " Actual " + list.get(1));
+            assertTrue(list.get(2).endsWith(line3), "Expected line 3 to end with: " + line3 + " Actual " + list.get(2));
+            assertTrue(list.get(3).endsWith(line4), "Expected line 4 to end with: " + line4 + " Actual " + list.get(3));
 
             for (final String frame : list) {
                 int length = -1;
@@ -141,12 +151,12 @@ public class Rfc5424LayoutTest {
                 final int firstSpacePosition = frame.indexOf(' ');
                 final String messageLength = frame.substring(0, firstSpacePosition);
                 try {
-                    length = Integer.parseInt(messageLength);
+                    length = Integers.parseInt(messageLength);
                     // the ListAppender removes the ending newline, so we expect one less size
                     assertEquals(frameLength, messageLength.length() + length);
                 }
                 catch (final NumberFormatException e) {
-                    assertTrue("Not a valid RFC 5425 frame", false);
+                    fail("Not a valid RFC 5425 frame");
                 }
             }
 
@@ -157,9 +167,8 @@ public class Rfc5424LayoutTest {
             root.debug("This is a test");
 
             list = appender.getMessages();
-            assertTrue("No messages expected, found " + list.size(), list.isEmpty());
+            assertTrue(list.isEmpty(), "No messages expected, found " + list.size());
         } finally {
-            ThreadContext.clearMap();
             root.removeAppender(appender);
             appender.stop();
         }
@@ -202,16 +211,17 @@ public class Rfc5424LayoutTest {
 
             root.info(MarkerManager.getMarker("EVENT"), collectionMessage);
 
-            final List<String> list = appender.getMessages();
-            final String result = list.get(0);
-            assertTrue("Expected line to contain " + collectionLine1 + ", Actual " + result,
-                    result.contains(collectionLine1));
-            assertTrue("Expected line to contain " + collectionLine2 + ", Actual " + result,
-                    result.contains(collectionLine2));
-            assertTrue("Expected line to contain " + collectionLine3 + ", Actual " + result,
-                    result.contains(collectionLine3));
-            assertTrue("Expected line to end with: " + collectionEndOfLine + " Actual " + result,
-                    result.endsWith(collectionEndOfLine));
+            List<String> list = appender.getMessages();
+            String result = list.get(0);
+            assertTrue(
+                    result.contains(collectionLine1), "Expected line to contain " + collectionLine1 + ", Actual " + result);
+            assertTrue(
+                    result.contains(collectionLine2), "Expected line to contain " + collectionLine2 + ", Actual " + result);
+            assertTrue(
+                    result.contains(collectionLine3), "Expected line to contain " + collectionLine3 + ", Actual " + result);
+            assertTrue(
+                    result.endsWith(collectionEndOfLine),
+                    "Expected line to end with: " + collectionEndOfLine + " Actual " + result);
 
             for (final String frame : list) {
                 int length = -1;
@@ -219,18 +229,17 @@ public class Rfc5424LayoutTest {
                 final int firstSpacePosition = frame.indexOf(' ');
                 final String messageLength = frame.substring(0, firstSpacePosition);
                 try {
-                    length = Integer.parseInt(messageLength);
+                    length = Integers.parseInt(messageLength);
                     // the ListAppender removes the ending newline, so we expect one less size
                     assertEquals(frameLength, messageLength.length() + length);
                 }
                 catch (final NumberFormatException e) {
-                    assertTrue("Not a valid RFC 5425 frame", false);
+                    fail("Not a valid RFC 5425 frame");
                 }
             }
 
             appender.clear();
         } finally {
-            ThreadContext.clearMap();
             root.removeAppender(appender);
             appender.stop();
         }
@@ -277,10 +286,12 @@ public class Rfc5424LayoutTest {
 
             List<String> list = appender.getMessages();
 
-            assertTrue("Expected line 1 to end with: " + line1 + " Actual " + list.get(0), list.get(0).endsWith(line1));
-            assertTrue("Expected line 2 to end with: " + line2 + " Actual " + list.get(1), list.get(1).endsWith(line2));
-            assertTrue("Expected line 3 to end with: " + lineEscaped3 + " Actual " + list.get(2), list.get(2).endsWith(lineEscaped3));
-            assertTrue("Expected line 4 to end with: " + lineEscaped4 + " Actual " + list.get(3), list.get(3).endsWith(lineEscaped4));
+            assertTrue(list.get(0).endsWith(line1), "Expected line 1 to end with: " + line1 + " Actual " + list.get(0));
+            assertTrue(list.get(1).endsWith(line2), "Expected line 2 to end with: " + line2 + " Actual " + list.get(1));
+            assertTrue(list.get(2).endsWith(lineEscaped3),
+                    "Expected line 3 to end with: " + lineEscaped3 + " Actual " + list.get(2));
+            assertTrue(list.get(3).endsWith(lineEscaped4),
+                    "Expected line 4 to end with: " + lineEscaped4 + " Actual " + list.get(3));
 
             appender.clear();
 
@@ -289,7 +300,7 @@ public class Rfc5424LayoutTest {
             root.debug("This is a test");
 
             list = appender.getMessages();
-            assertTrue("No messages expected, found " + list.size(), list.isEmpty());
+            assertTrue(list.isEmpty(), "No messages expected, found " + list.size());
         } finally {
             root.removeAppender(appender);
             appender.stop();
@@ -323,9 +334,9 @@ public class Rfc5424LayoutTest {
 
             final List<String> list = appender.getMessages();
 
-            assertTrue("Not enough list entries", list.size() > 1);
+            assertTrue(list.size() > 1, "Not enough list entries");
             final String string = list.get(1);
-			      assertTrue("No Exception in " + string, string.contains("IllegalArgumentException"));
+			      assertTrue(string.contains("IllegalArgumentException"), "No Exception in " + string);
 
             appender.clear();
         } finally {
@@ -364,8 +375,8 @@ public class Rfc5424LayoutTest {
         try {
 
             final List<String> list = appender.getMessages();
-            assertTrue("Not enough list entries", list.size() > 0);
-            assertTrue("No class/method", list.get(0).contains("Rfc5424LayoutTest.testMDCLoggerFields"));
+            assertTrue(list.size() > 0, "Not enough list entries");
+            assertTrue(list.get(0).contains("Rfc5424LayoutTest.testMDCLoggerFields"), "No class/method");
 
             appender.clear();
         } finally {
@@ -408,11 +419,11 @@ public class Rfc5424LayoutTest {
         try {
 
             final List<String> list = appender.getMessages();
-            assertTrue("Not enough list entries", list.size() > 0);
+            assertTrue(list.size() > 0, "Not enough list entries");
             final String message =  list.get(0);
-            assertTrue("No class/method", message.contains("Rfc5424LayoutTest.testLoggerFields"));
+            assertTrue(message.contains("Rfc5424LayoutTest.testLoggerFields"), "No class/method");
             for (final String value : expectedToContain) {
-                Assert.assertTrue("Message expected to contain " + value + " but did not", message.contains(value));
+                assertTrue(message.contains(value), "Message expected to contain " + value + " but did not");
             }
             appender.clear();
         } finally {
@@ -455,11 +466,11 @@ public class Rfc5424LayoutTest {
         try {
 
             final List<String> list = appender.getMessages();
-            assertTrue("Not enough list entries", list.size() > 0);
+            assertTrue(list.size() > 0, "Not enough list entries");
             final String message =  list.get(0);
-            Assert.assertTrue("SD-ID should have been discarded", !message.contains("SD-ID"));
-            Assert.assertTrue("BAZ should have been included", message.contains("BAZ"));
-            Assert.assertTrue(mdcId + "should have been included", message.contains(mdcId));
+            assertFalse(message.contains("SD-ID"), "SD-ID should have been discarded");
+            assertTrue(message.contains("BAZ"), "BAZ should have been included");
+            assertTrue(message.contains(mdcId), mdcId + "should have been included");
             appender.clear();
         } finally {
             root.removeAppender(appender);
@@ -489,9 +500,9 @@ public class Rfc5424LayoutTest {
 
         try {
             final List<String> list = appender.getMessages();
-            assertTrue("Not enough list entries", list.size() > 0);
+            assertTrue(list.size() > 0, "Not enough list entries");
             final String message =  list.get(0);
-            Assert.assertTrue("Not the expected message received", message.contains(expectedToContain));
+            assertTrue(message.contains(expectedToContain), "Not the expected message received");
             appender.clear();
         } finally {
             root.removeAppender(appender);
@@ -507,8 +518,8 @@ public class Rfc5424LayoutTest {
         // set up appender
         final AbstractStringLayout layout = Rfc5424Layout.createLayout(Facility.LOCAL0, "Event", 3692, true, "RequestContext",
             null, null, true, null, "ATM", null, "key1, key2, locale", null, null, null, true, null, null);
-        final ListAppender appender = new ListAppender("List", null, layout, true, false);
 
+        final ListAppender appender = new ListAppender("List", null, layout, true, false);
         appender.start();
 
         // set appender on root and set level to debug
@@ -517,12 +528,93 @@ public class Rfc5424LayoutTest {
         root.info("Hello {}", "World");
         try {
             final List<String> list = appender.getMessages();
-            assertTrue("Not enough list entries", list.size() > 0);
+            assertTrue(list.size() > 0, "Not enough list entries");
             final String message =  list.get(0);
-            assertTrue("Incorrect message. Expected - Hello World, Actual - " + message, message.contains("Hello World"));
+            assertTrue(message.contains("Hello World"),
+                    "Incorrect message. Expected - Hello World, Actual - " + message);
         } finally {
             root.removeAppender(appender);
             appender.stop();
         }
     }
+
+    @Test
+    void testLayoutBuilder() {
+        for (final Appender appender : root.getAppenders().values()) {
+            root.removeAppender(appender);
+        }
+
+        final AbstractStringLayout layout = new Rfc5424Layout.Rfc5424LayoutBuilder()
+                .setFacility(Facility.LOCAL0)
+                .setId("Event")
+                .setEin("1234.56.7")
+                .setIncludeMDC(true)
+                .setMdcId("RequestContext")
+                .setIncludeNL(true)
+                .setAppName("ATM")
+                .setExcludes("key1, key2, locale")
+                .setUseTLSMessageFormat(true)
+                .build();
+
+        final ListAppender appender = new ListAppender("List", null, layout, true, false);
+        appender.start();
+
+        root.addAppender(appender);
+        root.setLevel(Level.DEBUG);
+        root.info("Hello {}", "World");
+        try {
+            final List<String> list = appender.getMessages();
+            assertTrue(list.size() > 0, "Not enough list entries");
+            final String message =  list.get(0);
+            assertTrue(message.contains("Hello World"),
+                    "Incorrect message. Expected - Hello World, Actual - " + message);
+        } finally {
+            root.removeAppender(appender);
+            appender.stop();
+        }
+    }
+
+    @Test
+    public void testLayoutBuilderDefaultValues() {
+        final Rfc5424Layout layout = new Rfc5424Layout.Rfc5424LayoutBuilder().build();
+        checkDefaultValues(layout);
+
+        final PluginManager manager = new PluginManager(Node.CATEGORY);
+        manager.collectPlugins();
+        final Object obj = new PluginBuilder(manager.getPluginType("Rfc5424Layout")).withConfigurationNode(new Node())
+                .withConfiguration(new DefaultConfiguration())
+                .build();
+        assertTrue(obj instanceof Rfc5424Layout);
+        checkDefaultValues((Rfc5424Layout) obj);
+    }
+
+    private void checkDefaultValues(final Rfc5424Layout layout) {
+        assertNotNull(layout);
+        assertEquals(Facility.LOCAL0, layout.getFacility());
+        assertEquals(String.valueOf(Rfc5424Layout.DEFAULT_ENTERPRISE_NUMBER), layout.getEnterpriseNumber());
+        assertEquals(true, layout.isIncludeMdc());
+        assertEquals(Rfc5424Layout.DEFAULT_MDCID, layout.getMdcId());
+        assertEquals(Rfc5424Layout.DEFAULT_ID, layout.getDefaultId());
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = { "123456789", "0", "2147483647", "123.45.6.78.9", "0.0.0.0.0.0.0.0.0.0.0.0.0.0" })
+    void testLayoutBuilderValidEids(String eid) {
+        final AbstractStringLayout layout = new Rfc5424Layout.Rfc5424LayoutBuilder()
+                .setEin(eid)
+                .build();
+
+        assertNotNull(layout);
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = { "abc", "someEid", "-1" })
+    void testLayoutBuilderInvalidEids(String eid) {
+        final AbstractStringLayout layout = new Rfc5424Layout.Rfc5424LayoutBuilder()
+                .setEin(eid)
+                .build();
+
+        assertNull(layout);
+    }
+
 }

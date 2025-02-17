@@ -17,6 +17,7 @@
 package org.apache.logging.log4j.core.impl;
 
 import java.io.Serializable;
+import java.util.Objects;
 
 import org.apache.logging.log4j.core.pattern.PlainTextRenderer;
 import org.apache.logging.log4j.core.pattern.TextRenderer;
@@ -33,6 +34,8 @@ import org.apache.logging.log4j.core.pattern.TextRenderer;
  * </ul>
  */
 public final class ExtendedStackTraceElement implements Serializable {
+
+    static final ExtendedStackTraceElement[] EMPTY_ARRAY = {};
 
     private static final long serialVersionUID = -2171069569241280505L;
 
@@ -67,18 +70,10 @@ public final class ExtendedStackTraceElement implements Serializable {
             return false;
         }
         final ExtendedStackTraceElement other = (ExtendedStackTraceElement) obj;
-        if (this.extraClassInfo == null) {
-            if (other.extraClassInfo != null) {
-                return false;
-            }
-        } else if (!this.extraClassInfo.equals(other.extraClassInfo)) {
+        if (!Objects.equals(this.extraClassInfo, other.extraClassInfo)) {
             return false;
         }
-        if (this.stackTraceElement == null) {
-            if (other.stackTraceElement != null) {
-                return false;
-            }
-        } else if (!this.stackTraceElement.equals(other.stackTraceElement)) {
+        if (!Objects.equals(this.stackTraceElement, other.stackTraceElement)) {
             return false;
         }
         return true;
@@ -122,11 +117,7 @@ public final class ExtendedStackTraceElement implements Serializable {
 
     @Override
     public int hashCode() {
-        final int prime = 31;
-        int result = 1;
-        result = prime * result + ((this.extraClassInfo == null) ? 0 : this.extraClassInfo.hashCode());
-        result = prime * result + ((this.stackTraceElement == null) ? 0 : this.stackTraceElement.hashCode());
-        return result;
+        return Objects.hash(extraClassInfo, stackTraceElement);
     }
 
     public boolean isNativeMethod() {

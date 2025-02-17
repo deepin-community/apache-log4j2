@@ -40,13 +40,12 @@ public final class IfAccumulatedFileCount implements PathCondition {
     private int count;
     private final PathCondition[] nestedConditions;
 
-    private IfAccumulatedFileCount(final int thresholdParam, final PathCondition[] nestedConditions) {
+    private IfAccumulatedFileCount(final int thresholdParam, final PathCondition... nestedConditions) {
         if (thresholdParam <= 0) {
             throw new IllegalArgumentException("Count must be a positive integer but was " + thresholdParam);
         }
         this.threshold = thresholdParam;
-        this.nestedConditions = nestedConditions == null ? new PathCondition[0] : Arrays.copyOf(nestedConditions,
-                nestedConditions.length);
+        this.nestedConditions = PathCondition.copy(nestedConditions);
     }
 
     public int getThresholdCount() {

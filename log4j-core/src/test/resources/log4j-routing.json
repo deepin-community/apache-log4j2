@@ -15,9 +15,9 @@
  * limitations under the license.
  */
 { "configuration": { "status": "error", "name": "RoutingTest",
-      "properties": {
-        "property": { "name": "filename", "value" : "target/rolling1/rollingtest-$${sd:type}.log" }
-      },
+    "properties": {
+      "property": { "name": "filename", "value" : "target/rolling1/rollingtest-$${sd:type}.log" }
+    },
     "ThresholdFilter": { "level": "debug" },
     "appenders": {
       "Console": { "name": "STDOUT",

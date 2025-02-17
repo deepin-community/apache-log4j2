@@ -16,15 +16,17 @@
  */
 package org.apache.logging.log4j.core.pattern;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import org.apache.logging.log4j.Level;
 import org.apache.logging.log4j.core.LogEvent;
 import org.apache.logging.log4j.core.impl.Log4jLogEvent;
+import org.apache.logging.log4j.core.util.Integers;
 import org.apache.logging.log4j.message.SimpleMessage;
 import org.apache.logging.log4j.util.Strings;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 public class ThrowablePatternConverterTest {
 
@@ -51,10 +53,10 @@ public class ThrowablePatternConverterTest {
     /**
      * TODO: Needs better a better exception? NumberFormatException is NOT helpful.
      */
-    @Test(expected = Exception.class)
+    @Test
     public void testBadShortOption() {
         final String[] options = { "short.UNKNOWN" };
-        ThrowablePatternConverter.newInstance(null, options);
+        assertThrows(NumberFormatException.class, () -> ThrowablePatternConverter.newInstance(null, options));
     }
 
     @Test
@@ -81,8 +83,8 @@ public class ThrowablePatternConverterTest {
         converter.format(event, sb);
         final String result = sb.toString();
         // System.out.print(result);
-        assertTrue("Incorrect start of msg", result.startsWith("java.lang.IllegalArgumentException: IllegalArgument"));
-        assertTrue("Missing nested exception", result.contains("java.lang.NullPointerException: null pointer"));
+        assertTrue(result.startsWith("java.lang.IllegalArgumentException: IllegalArgument"), "Incorrect start of msg");
+        assertTrue(result.contains("java.lang.NullPointerException: null pointer"), "Missing nested exception");
     }
 
     @Test
@@ -101,7 +103,7 @@ public class ThrowablePatternConverterTest {
         final StringBuilder sb = new StringBuilder();
         converter.format(event, sb);
         final String result = sb.toString();
-        assertEquals("The class names should be same", packageName + "ThrowablePatternConverterTest", result);
+        assertEquals(packageName + "ThrowablePatternConverterTest", result, "The class names should be same");
     }
 
     @Test
@@ -119,7 +121,7 @@ public class ThrowablePatternConverterTest {
         final StringBuilder sb = new StringBuilder();
         converter.format(event, sb);
         final String result = sb.toString();
-        assertEquals("The file names should be same", "ThrowablePatternConverterTest.java", result);
+        assertEquals("ThrowablePatternConverterTest.java", result, "The file names should be same");
     }
 
     @Test
@@ -140,7 +142,7 @@ public class ThrowablePatternConverterTest {
         final StringBuilder sb = new StringBuilder();
         converter.format(event, sb);
         final String result = sb.toString();
-        assertTrue("The line numbers should be same", expectedLineNumber == Integer.parseInt(result));
+        assertEquals(Integers.parseInt(result), expectedLineNumber, "The line numbers should be same");
     }
 
     @Test
@@ -157,7 +159,7 @@ public class ThrowablePatternConverterTest {
         final StringBuilder sb = new StringBuilder();
         converter.format(event, sb);
         final String result = sb.toString();
-        assertEquals("The messages should be same", "I am localized.", result);
+        assertEquals("I am localized.", result, "The messages should be same");
     }
 
     @Test
@@ -175,7 +177,7 @@ public class ThrowablePatternConverterTest {
         final StringBuilder sb = new StringBuilder();
         converter.format(event, sb);
         final String result = sb.toString();
-        assertEquals("The messages should be same", "IllegalArgument", result);
+        assertEquals("IllegalArgument", result, "The messages should be same");
     }
 
     @Test
@@ -193,7 +195,7 @@ public class ThrowablePatternConverterTest {
         final StringBuilder sb = new StringBuilder();
         converter.format(event, sb);
         final String result = sb.toString();
-        assertEquals("The method names should be same", "testShortMethodName", result);
+        assertEquals("testShortMethodName", result, "The method names should be same");
     }
 
     @Test
@@ -219,7 +221,8 @@ public class ThrowablePatternConverterTest {
         final StringBuilder sb = new StringBuilder();
         converter.format(event, sb);
         final String result = sb.toString();
-        assertTrue("Each line of full stack trace should end with the specified suffix", everyLineEndsWith(result, "test suffix"));
+        assertTrue(everyLineEndsWith(result, "test suffix"),
+                "Each line of full stack trace should end with the specified suffix");
     }
 
     @Test
@@ -238,7 +241,7 @@ public class ThrowablePatternConverterTest {
         final StringBuilder sb = new StringBuilder();
         converter.format(event, sb);
         final String result = sb.toString();
-        assertTrue("Each line should end with suffix", everyLineEndsWith(result, "test suffix"));
+        assertTrue(everyLineEndsWith(result, "test suffix"), "Each line should end with suffix");
     }
 
 }

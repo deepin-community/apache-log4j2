@@ -16,11 +16,12 @@
  */
 package org.apache.logging.log4j.core.impl;
 
-import static org.junit.Assert.assertArrayEquals;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
@@ -32,24 +33,28 @@ import java.net.InetSocketAddress;
 import java.nio.channels.ServerSocketChannel;
 import java.security.Permission;
 import java.security.SecureRandom;
+import java.util.ArrayDeque;
+import java.util.Deque;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.Stack;
+
 import javax.crypto.BadPaddingException;
 import javax.crypto.Cipher;
 import javax.crypto.KeyGenerator;
 import javax.crypto.spec.IvParameterSpec;
 
-import com.fasterxml.jackson.annotation.JsonProperty;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.apache.logging.log4j.core.config.plugins.convert.Base64Converter;
 import org.apache.logging.log4j.core.jackson.Log4jJsonObjectMapper;
 import org.apache.logging.log4j.core.jackson.Log4jXmlObjectMapper;
 import org.apache.logging.log4j.core.pattern.PlainTextRenderer;
+import org.apache.logging.log4j.util.Constants;
 import org.apache.logging.log4j.util.Strings;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
+
+import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.databind.ObjectMapper;
 
 /**
  *
@@ -129,26 +134,21 @@ public class ThrowableProxyTest {
      */
     @Test
     public void testLogStackTraceWithClassThatCannotInitialize() {
-        try {
-            // Try to create the object, which will always fail during class initialization
-            final AlwaysThrowsError error = new AlwaysThrowsError();
+        final Error e = assertThrows(Error.class, AlwaysThrowsError::new);
+        // Print the stack trace to System.out for informational purposes
+        // System.err.println("### Here's the stack trace that we'll log with log4j ###");
+        // e.printStackTrace();
+        // System.err.println("### End stack trace ###");
 
-            // If the error was not triggered then fail
-            fail("Test did not throw expected error: " + error);
-        } catch (final Throwable e) {
-            // Print the stack trace to System.out for informational purposes
-            // System.err.println("### Here's the stack trace that we'll log with log4j ###");
-            // e.printStackTrace();
-            // System.err.println("### End stack trace ###");
+        final Logger logger = LogManager.getLogger(getClass());
 
-            final Logger logger = LogManager.getLogger(getClass());
-
+        assertDoesNotThrow(() -> {
             // This is the critical portion of the test. The log message must be printed without
             // throwing a java.lang.Error when introspecting the AlwaysThrowError class in the
             // stack trace.
             logger.error(e.getMessage(), e);
             logger.error(e);
-        }
+        });
     }
 
     @Test
@@ -167,11 +167,11 @@ public class ThrowableProxyTest {
                             }
                         }
                     });
-            ServerSocketChannel.open().socket().bind(new InetSocketAddress("localhost", 9300));
-            ServerSocketChannel.open().socket().bind(new InetSocketAddress("localhost", 9300));
-            fail("expected a java.net.BindException");
-        } catch (final BindException e) {
-            new ThrowableProxy(e);
+            final BindException e = assertThrows(BindException.class, () -> {
+                ServerSocketChannel.open().socket().bind(new InetSocketAddress("localhost", 9300));
+                ServerSocketChannel.open().socket().bind(new InetSocketAddress("localhost", 9300));
+            });
+            assertDoesNotThrow(() -> new ThrowableProxy(e));
         } finally {
             // restore the security manager
             System.setSecurityManager(sm);
@@ -203,14 +203,12 @@ public class ThrowableProxyTest {
             generator.init(128);
             final IvParameterSpec algorithmParameterSpec = new IvParameterSpec(bytes);
             ec.init(Cipher.ENCRYPT_MODE, generator.generateKey(), algorithmParameterSpec, secureRandom);
-            final byte[] raw = new byte[0];
+            final byte[] raw = Constants.EMPTY_BYTE_ARRAY;
             final byte[] encrypted = ec.doFinal(raw);
             final Cipher dc = Cipher.getInstance(algorithm);
             dc.init(Cipher.DECRYPT_MODE, generator.generateKey(), algorithmParameterSpec, secureRandom);
-            dc.doFinal(encrypted);
-            fail("expected a javax.crypto.BadPaddingException");
-        } catch (final BadPaddingException e) {
-            new ThrowableProxy(e);
+            final BadPaddingException e = assertThrows(BadPaddingException.class, () -> dc.doFinal(encrypted));
+            assertDoesNotThrow(() -> new ThrowableProxy(e));
         } finally {
             // restore the existing security manager
             System.setSecurityManager(sm);
@@ -308,7 +306,7 @@ public class ThrowableProxyTest {
         final String separator = " | ";
         final String extendedStackTraceAsString = proxy.getExtendedStackTraceAsString(null,
                 PlainTextRenderer.getInstance(), " | ", Strings.EMPTY);
-        assertTrue(extendedStackTraceAsString, allLinesContain(extendedStackTraceAsString, separator));
+        assertTrue(allLinesContain(extendedStackTraceAsString, separator), extendedStackTraceAsString);
     }
 
     @Test
@@ -318,7 +316,7 @@ public class ThrowableProxyTest {
 
         final String suffix = "some suffix";
         final String extendedStackTraceAsString = proxy.getExtendedStackTraceAsString(suffix);
-        assertTrue(extendedStackTraceAsString, lastLineContains(extendedStackTraceAsString, suffix));
+        assertTrue(lastLineContains(extendedStackTraceAsString, suffix), extendedStackTraceAsString);
     }
 
     @Test
@@ -373,12 +371,12 @@ public class ThrowableProxyTest {
     @Test
     public void testStack() {
         final Map<String, ThrowableProxyHelper.CacheEntry> map = new HashMap<>();
-        final Stack<Class<?>> stack = new Stack<>();
+        final Deque<Class<?>> stack = new ArrayDeque<>();
         final Throwable throwable = new IllegalStateException("This is a test");
         final ThrowableProxy proxy = new ThrowableProxy(throwable);
         final ExtendedStackTraceElement[] callerPackageData = ThrowableProxyHelper.toExtendedStackTrace(proxy, stack, map, null,
                 throwable.getStackTrace());
-        assertNotNull("No package data returned", callerPackageData);
+        assertNotNull(callerPackageData, "No package data returned");
     }
 
     /**
@@ -388,7 +386,7 @@ public class ThrowableProxyTest {
      */
     @Test
     public void testStackWithUnloadableClass() throws Exception {
-        final Stack<Class<?>> stack = new Stack<>();
+        final Deque<Class<?>> stack = new ArrayDeque<>();
         final Map<String, ThrowableProxyHelper.CacheEntry> map = new HashMap<>();
 
         final String runtimeExceptionThrownAtUnloadableClass_base64 = "rO0ABXNyABpqYXZhLmxhbmcuUnVudGltZUV4Y2VwdGlvbp5fBkcKNIPlAgAAeHIAE2phdmEubGFuZy5FeGNlcHRpb27Q/R8+GjscxAIAAHhyABNqYXZhLmxhbmcuVGhyb3dhYmxl1cY1Jzl3uMsDAANMAAVjYXVzZXQAFUxqYXZhL2xhbmcvVGhyb3dhYmxlO0wADWRldGFpbE1lc3NhZ2V0ABJMamF2YS9sYW5nL1N0cmluZztbAApzdGFja1RyYWNldAAeW0xqYXZhL2xhbmcvU3RhY2tUcmFjZUVsZW1lbnQ7eHBxAH4ABnB1cgAeW0xqYXZhLmxhbmcuU3RhY2tUcmFjZUVsZW1lbnQ7AkYqPDz9IjkCAAB4cAAAAAFzcgAbamF2YS5sYW5nLlN0YWNrVHJhY2VFbGVtZW50YQnFmiY23YUCAARJAApsaW5lTnVtYmVyTAAOZGVjbGFyaW5nQ2xhc3NxAH4ABEwACGZpbGVOYW1lcQB+AARMAAptZXRob2ROYW1lcQB+AAR4cAAAAAZ0ADxvcmcuYXBhY2hlLmxvZ2dpbmcubG9nNGouY29yZS5pbXBsLkZvcmNlTm9EZWZDbGFzc0ZvdW5kRXJyb3J0AB5Gb3JjZU5vRGVmQ2xhc3NGb3VuZEVycm9yLmphdmF0AARtYWlueA==";

@@ -18,7 +18,6 @@ package org.apache.logging.log4j.core.layout;
 
 import org.apache.logging.log4j.Level;
 import org.apache.logging.log4j.Logger;
-import org.apache.logging.log4j.Marker;
 import org.apache.logging.log4j.core.LogEvent;
 import org.apache.logging.log4j.core.config.Configuration;
 import org.apache.logging.log4j.core.config.Node;
@@ -141,7 +140,7 @@ public class LevelPatternSelector implements PatternSelector, LocationAware {
             try {
                 final List<PatternFormatter> list = parser.parse(property.getPattern(), alwaysWriteExceptions,
                         disableAnsi, noConsoleNoAnsi);
-                PatternFormatter[] formatters = list.toArray(new PatternFormatter[0]);
+                PatternFormatter[] formatters = list.toArray(PatternFormatter.EMPTY_ARRAY);
                 formatterMap.put(property.getKey(), formatters);
                 for (int i = 0; !needsLocation && i < formatters.length; ++i) {
                     needsLocation = formatters[i].requiresLocation();
@@ -155,7 +154,7 @@ public class LevelPatternSelector implements PatternSelector, LocationAware {
         try {
             final List<PatternFormatter> list = parser.parse(defaultPattern, alwaysWriteExceptions, disableAnsi,
                     noConsoleNoAnsi);
-            defaultFormatters = list.toArray(new PatternFormatter[0]);
+            defaultFormatters = list.toArray(PatternFormatter.EMPTY_ARRAY);
             this.defaultPattern = defaultPattern;
             for (int i = 0; !needsLocation && i < defaultFormatters.length; ++i) {
                 needsLocation = defaultFormatters[i].requiresLocation();

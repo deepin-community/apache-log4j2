@@ -17,25 +17,17 @@
 
 package org.apache.logging.log4j.core.async;
 
-import java.util.Locale;
-import java.util.concurrent.Callable;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Future;
-import java.util.concurrent.TimeUnit;
-
-import com.lmax.disruptor.BlockingWaitStrategy;
-import com.lmax.disruptor.BusySpinWaitStrategy;
 import com.lmax.disruptor.ExceptionHandler;
-import com.lmax.disruptor.SleepingWaitStrategy;
-import com.lmax.disruptor.TimeoutBlockingWaitStrategy;
 import com.lmax.disruptor.WaitStrategy;
-import com.lmax.disruptor.YieldingWaitStrategy;
 import org.apache.logging.log4j.Logger;
 import org.apache.logging.log4j.core.util.Constants;
 import org.apache.logging.log4j.core.util.Integers;
 import org.apache.logging.log4j.core.util.Loader;
 import org.apache.logging.log4j.status.StatusLogger;
 import org.apache.logging.log4j.util.PropertiesUtil;
+
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Future;
 
 /**
  * Utility methods for getting Disruptor related configuration.
@@ -60,36 +52,16 @@ final class DisruptorUtil {
     private DisruptorUtil() {
     }
 
-    static long getTimeout(final String propertyName, final long defaultTimeout) {
-        return PropertiesUtil.getProperties().getLongProperty(propertyName, defaultTimeout);
-    }
+    static WaitStrategy createWaitStrategy(final String propertyName,
+                                           final AsyncWaitStrategyFactory asyncWaitStrategyFactory) {
 
-    static WaitStrategy createWaitStrategy(final String propertyName) {
-        final String key = propertyName.startsWith("AsyncLogger.")
-                ? "AsyncLogger.Timeout"
-                : "AsyncLoggerConfig.Timeout";
-        final long timeoutMillis = DisruptorUtil.getTimeout(key, 10L);
-        return createWaitStrategy(propertyName, timeoutMillis);
-    }
-
-    static WaitStrategy createWaitStrategy(final String propertyName, final long timeoutMillis) {
-        final String strategy = PropertiesUtil.getProperties().getStringProperty(propertyName, "TIMEOUT");
-        LOGGER.trace("property {}={}", propertyName, strategy);
-        final String strategyUp = strategy.toUpperCase(Locale.ROOT); // TODO Refactor into Strings.toRootUpperCase(String)
-        switch (strategyUp) { // TODO Define a DisruptorWaitStrategy enum?
-        case "SLEEP":
-            return new SleepingWaitStrategy();
-        case "YIELD":
-            return new YieldingWaitStrategy();
-        case "BLOCK":
-            return new BlockingWaitStrategy();
-        case "BUSYSPIN":
-            return new BusySpinWaitStrategy();
-        case "TIMEOUT":
-            return new TimeoutBlockingWaitStrategy(timeoutMillis, TimeUnit.MILLISECONDS);
-        default:
-            return new TimeoutBlockingWaitStrategy(timeoutMillis, TimeUnit.MILLISECONDS);
+        if (asyncWaitStrategyFactory == null) {
+            LOGGER.debug("No AsyncWaitStrategyFactory was configured in the configuration, using default factory...");
+            return new DefaultAsyncWaitStrategyFactory(propertyName).createWaitStrategy();
         }
+
+        LOGGER.debug("Using configured AsyncWaitStrategyFactory {}", asyncWaitStrategyFactory.getClass().getName());
+        return asyncWaitStrategyFactory.createWaitStrategy();
     }
 
     static int calculateRingBufferSize(final String propertyName) {
@@ -97,7 +69,7 @@ final class DisruptorUtil {
         final String userPreferredRBSize = PropertiesUtil.getProperties().getStringProperty(propertyName,
                 String.valueOf(ringBufferSize));
         try {
-            int size = Integer.parseInt(userPreferredRBSize);
+            int size = Integers.parseInt(userPreferredRBSize);
             if (size < RINGBUFFER_MIN_SIZE) {
                 size = RINGBUFFER_MIN_SIZE;
                 LOGGER.warn("Invalid RingBufferSize {}, using minimum size {}.", userPreferredRBSize,
@@ -150,12 +122,7 @@ final class DisruptorUtil {
      * @return the thread ID of the background appender thread
      */
     public static long getExecutorThreadId(final ExecutorService executor) {
-        final Future<Long> result = executor.submit(new Callable<Long>() {
-            @Override
-            public Long call() {
-                return Thread.currentThread().getId();
-            }
-        });
+        final Future<Long> result = executor.submit(() -> Thread.currentThread().getId());
         try {
             return result.get();
         } catch (final Exception ex) {

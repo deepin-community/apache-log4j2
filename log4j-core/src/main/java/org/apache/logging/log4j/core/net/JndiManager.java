@@ -17,6 +17,8 @@
 
 package org.apache.logging.log4j.core.net;
 
+import java.net.URI;
+import java.net.URISyntaxException;
 import java.util.Properties;
 import java.util.concurrent.TimeUnit;
 
@@ -27,19 +29,76 @@ import javax.naming.NamingException;
 import org.apache.logging.log4j.core.appender.AbstractManager;
 import org.apache.logging.log4j.core.appender.ManagerFactory;
 import org.apache.logging.log4j.core.util.JndiCloser;
+import org.apache.logging.log4j.util.PropertiesUtil;
 
 /**
- * Manages a JNDI {@link javax.naming.Context}.
+ * Manages a JNDI {@link javax.naming.directory.DirContext}.
  *
  * @since 2.1
  */
 public class JndiManager extends AbstractManager {
 
     private static final JndiManagerFactory FACTORY = new JndiManagerFactory();
+    private static final String PREFIX = "log4j2.enableJndi";
+    private static final String JAVA_SCHEME = "java";
 
-    private final Context context;
+    private final InitialContext context;
 
-    private JndiManager(final String name, final Context context) {
+    private static boolean isJndiEnabled(final String subKey) {
+        return PropertiesUtil.getProperties().getBooleanProperty(PREFIX + subKey, false);
+    }
+
+    /**
+     * Tests whether <em>any</em> JNDI system properties are currently enabled.
+     *
+     * @return whether <em>any</em> JNDI system properties are currently enabled.
+     */
+    public static boolean isJndiEnabled() {
+        // The value is not cached to allow complex stacks to effect this setting.
+        return isJndiContextSelectorEnabled() || isJndiJdbcEnabled() || isJndiJmsEnabled() || isJndiLookupEnabled();
+    }
+
+    /**
+     * Tests whether the JNDI system properties for ContextSelector is currently enabled.
+     *
+     * @return whether the JNDI system properties for ContextSelector is currently enabled.
+     */
+    public static boolean isJndiContextSelectorEnabled() {
+        // The value is not cached to allow complex stacks to effect this setting.
+        return isJndiEnabled("ContextSelector");
+    }
+
+    /**
+     * Tests whether the JNDI system properties for JDBC is currently enabled.
+     *
+     * @return whether the JNDI system properties for JDBC is currently enabled.
+     */
+    public static boolean isJndiJdbcEnabled() {
+        // The value is not cached to allow complex stacks to effect this setting.
+        return isJndiEnabled("Jdbc");
+    }
+
+    /**
+     * Tests whether the JNDI system properties for JMS is currently enabled.
+     *
+     * @return whether the JNDI system properties for JMS is currently enabled.
+     */
+    public static boolean isJndiJmsEnabled() {
+        // The value is not cached to allow complex stacks to effect this setting.
+        return isJndiEnabled("Jms");
+    }
+
+    /**
+     * Tests whether the JNDI system properties for Lookup is currently enabled.
+     *
+     * @return whether the JNDI system properties for Lookup is currently enabled.
+     */
+    public static boolean isJndiLookupEnabled() {
+        // The value is not cached to allow complex stacks to effect this setting.
+        return isJndiEnabled("Lookup");
+    }
+
+    private JndiManager(final String name, final InitialContext context) {
         super(null, name);
         this.context = context;
     }
@@ -169,17 +228,32 @@ public class JndiManager extends AbstractManager {
      */
     @SuppressWarnings("unchecked")
     public <T> T lookup(final String name) throws NamingException {
-        return (T) this.context.lookup(name);
+        if (context == null) {
+            return null;
+        }
+        try {
+            URI uri = new URI(name);
+            if (uri.getScheme() == null || uri.getScheme().equals(JAVA_SCHEME)) {
+                return (T) this.context.lookup(name);
+            }
+            LOGGER.warn("Unsupported JNDI URI - {}", name);
+        } catch (URISyntaxException ex) {
+            LOGGER.warn("Invalid JNDI URI - {}", name);
+        }
+        return null;
     }
 
     private static class JndiManagerFactory implements ManagerFactory<JndiManager, Properties> {
 
         @Override
         public JndiManager createManager(final String name, final Properties data) {
+            if (!isJndiEnabled()) {
+                throw new IllegalStateException(String.format("JNDI must be enabled by setting one of the %s* properties to true", PREFIX));
+            }
             try {
                 return new JndiManager(name, new InitialContext(data));
             } catch (final NamingException e) {
-                LOGGER.error("Error creating JNDI InitialContext.", e);
+                LOGGER.error("Error creating JNDI InitialContext for '{}'.", name, e);
                 return null;
             }
         }

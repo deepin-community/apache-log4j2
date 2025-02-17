@@ -17,6 +17,7 @@
 package org.apache.logging.log4j.core.appender;
 
 import java.nio.charset.StandardCharsets;
+import java.util.Objects;
 
 import org.apache.logging.log4j.util.Chars;
 
@@ -46,10 +47,7 @@ public class TlsSyslogFrame {
 
     @Override
     public int hashCode() {
-        final int prime = 31;
-        int result = 1;
-        result = prime * result + ((message == null) ? 0 : message.hashCode());
-        return result;
+        return 31 + Objects.hashCode(message);
     }
 
     @Override
@@ -64,11 +62,7 @@ public class TlsSyslogFrame {
             return false;
         }
         final TlsSyslogFrame other = (TlsSyslogFrame) obj;
-        if (message == null) {
-            if (other.message != null) {
-                return false;
-            }
-        } else if (!message.equals(other.message)) {
+        if (!Objects.equals(message, other.message)) {
             return false;
         }
         return true;

@@ -52,26 +52,27 @@ public final class NetUtils {
     public static String getLocalHostname() {
         try {
             final InetAddress addr = InetAddress.getLocalHost();
-            return addr.getHostName();
+            return addr == null ? UNKNOWN_LOCALHOST : addr.getHostName();
         } catch (final UnknownHostException uhe) {
             try {
                 final Enumeration<NetworkInterface> interfaces = NetworkInterface.getNetworkInterfaces();
-                while (interfaces.hasMoreElements()) {
-                    final NetworkInterface nic = interfaces.nextElement();
-                    final Enumeration<InetAddress> addresses = nic.getInetAddresses();
-                    while (addresses.hasMoreElements()) {
-                        final InetAddress address = addresses.nextElement();
-                        if (!address.isLoopbackAddress()) {
-                            final String hostname = address.getHostName();
-                            if (hostname != null) {
-                                return hostname;
+                if (interfaces != null) {
+                    while (interfaces.hasMoreElements()) {
+                        final NetworkInterface nic = interfaces.nextElement();
+                        final Enumeration<InetAddress> addresses = nic.getInetAddresses();
+                        while (addresses.hasMoreElements()) {
+                            final InetAddress address = addresses.nextElement();
+                            if (!address.isLoopbackAddress()) {
+                                final String hostname = address.getHostName();
+                                if (hostname != null) {
+                                    return hostname;
+                                }
                             }
                         }
                     }
                 }
             } catch (final SocketException se) {
-                LOGGER.error("Could not determine local host name", uhe);
-                return UNKNOWN_LOCALHOST;
+                // ignore and log below.
             }
             LOGGER.error("Could not determine local host name", uhe);
             return UNKNOWN_LOCALHOST;
@@ -95,18 +96,20 @@ public final class NetUtils {
                 }
                 if (mac == null) {
                     final Enumeration<NetworkInterface> networkInterfaces = NetworkInterface.getNetworkInterfaces();
-                    while (networkInterfaces.hasMoreElements() && mac == null) {
-                        final NetworkInterface nic = networkInterfaces.nextElement();
-                        if (isUpAndNotLoopback(nic)) {
-                            mac = nic.getHardwareAddress();
+                    if (networkInterfaces != null) {
+                        while (networkInterfaces.hasMoreElements() && mac == null) {
+                            final NetworkInterface nic = networkInterfaces.nextElement();
+                            if (isUpAndNotLoopback(nic)) {
+                                mac = nic.getHardwareAddress();
+                            }
                         }
                     }
                 }
             } catch (final SocketException e) {
                 LOGGER.catching(e);
             }
-            if (mac == null || mac.length == 0) {
-                // Emulate a mac address with an IP v4 or v6
+            if (ArrayUtils.isEmpty(mac) && localHost != null) {
+                // Emulate a MAC address with an IP v4 or v6
                 final byte[] address = localHost.getAddress();
                 // Take only 6 bytes if the address is an IPv6 otherwise will pad with two zero bytes
                 mac = Arrays.copyOf(address, 6);
@@ -123,7 +126,7 @@ public final class NetUtils {
      */
     public static String getMacAddressString() {
         final byte[] macAddr = getMacAddress();
-        if (macAddr != null && macAddr.length > 0) {
+        if (!ArrayUtils.isEmpty(macAddr)) {
             StringBuilder sb = new StringBuilder(String.format("%02x", macAddr[0]));
             for (int i = 1; i < macAddr.length; ++i) {
                 sb.append(":").append(String.format("%02x", macAddr[i]));

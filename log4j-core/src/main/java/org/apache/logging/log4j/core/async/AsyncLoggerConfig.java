@@ -32,6 +32,7 @@ import org.apache.logging.log4j.core.config.Node;
 import org.apache.logging.log4j.core.config.Property;
 import org.apache.logging.log4j.core.config.plugins.Plugin;
 import org.apache.logging.log4j.core.config.plugins.PluginAttribute;
+import org.apache.logging.log4j.core.config.plugins.PluginBuilderFactory;
 import org.apache.logging.log4j.core.config.plugins.PluginConfiguration;
 import org.apache.logging.log4j.core.config.plugins.PluginElement;
 import org.apache.logging.log4j.core.config.plugins.PluginFactory;
@@ -48,10 +49,9 @@ import org.apache.logging.log4j.util.Strings;
  * AsyncLoggerConfig is a logger designed for high throughput and low latency
  * logging. It does not perform any I/O in the calling (application) thread, but
  * instead hands off the work to another thread as soon as possible. The actual
- * logging is performed in the background thread. It uses the LMAX Disruptor
- * library for inter-thread communication. (<a
- * href="http://lmax-exchange.github.com/disruptor/"
- * >http://lmax-exchange.github.com/disruptor/</a>)
+ * logging is performed in the background thread. It uses
+ * <a href="https://lmax-exchange.github.io/disruptor/">LMAX Disruptor</a> for
+ * inter-thread communication.
  * <p>
  * To use AsyncLoggerConfig, specify {@code <asyncLogger>} or
  * {@code <asyncRoot>} in configuration.
@@ -72,6 +72,23 @@ import org.apache.logging.log4j.util.Strings;
 @Plugin(name = "asyncLogger", category = Node.CATEGORY, printObject = true)
 public class AsyncLoggerConfig extends LoggerConfig {
 
+    @PluginBuilderFactory
+    public static <B extends Builder<B>> B newAsyncBuilder() {
+        return new Builder<B>().asBuilder();
+    }
+
+    public static class Builder<B extends Builder<B>> extends LoggerConfig.Builder<B> {
+
+        @Override
+        public LoggerConfig build() {
+            final String name = getLoggerName().equals(ROOT) ? Strings.EMPTY : getLoggerName();
+            LevelAndRefs container = LoggerConfig.getLevelAndRefs(getLevel(), getRefs(), getLevelAndRefs(),
+                    getConfig());
+            return new AsyncLoggerConfig(name, container.refs,getFilter(), container.level, isAdditivity(),
+                    getProperties(), getConfig(), includeLocation(getIncludeLocation()));
+        }
+    }
+
     private static final ThreadLocal<Boolean> ASYNC_LOGGER_ENTERED = new ThreadLocal<Boolean>() {
         @Override
         protected Boolean initialValue() {
@@ -90,6 +107,11 @@ public class AsyncLoggerConfig extends LoggerConfig {
                 includeLocation);
         delegate = config.getAsyncLoggerConfigDelegate();
         delegate.setLogEventFactory(getLogEventFactory());
+    }
+
+    // package-protected for testing
+    AsyncLoggerConfigDelegate getAsyncLoggerConfigDelegate() {
+        return delegate;
     }
 
     @Override
@@ -259,7 +281,7 @@ public class AsyncLoggerConfig extends LoggerConfig {
      * @return A new LoggerConfig.
      * @since 3.0
      */
-    @PluginFactory
+    @Deprecated
     public static LoggerConfig createLogger(
             @PluginAttribute(value = "additivity", defaultBoolean = true) final boolean additivity,
             @PluginAttribute("level") final Level level,
@@ -284,6 +306,22 @@ public class AsyncLoggerConfig extends LoggerConfig {
      */
     @Plugin(name = "asyncRoot", category = Core.CATEGORY_NAME, printObject = true)
     public static class RootLogger extends LoggerConfig {
+
+        @PluginBuilderFactory
+        public static <B extends Builder<B>> B newAsyncRootBuilder() {
+            return new Builder<B>().asBuilder();
+        }
+
+        public static class Builder<B extends Builder<B>> extends RootLogger.Builder<B> {
+
+            @Override
+            public LoggerConfig build() {
+                LevelAndRefs container = LoggerConfig.getLevelAndRefs(getLevel(), getRefs(), getLevelAndRefs(),
+                        getConfig());
+                return new AsyncLoggerConfig(LogManager.ROOT_LOGGER_NAME, container.refs, getFilter(), container.level,
+                        isAdditivity(), getProperties(), getConfig(), includeLocation(getIncludeLocation()));
+            }
+        }
 
         /**
          * @deprecated use {@link #createLogger(String, Level, String, AppenderRef[], Property[], Configuration, Filter)}
@@ -312,9 +350,9 @@ public class AsyncLoggerConfig extends LoggerConfig {
         }
 
         /**
-         * @since 3.0
+         *
          */
-        @PluginFactory
+        @Deprecated
         public static LoggerConfig createLogger(
                 @PluginAttribute("additivity") final String additivity,
                 @PluginAttribute("level") final Level level,

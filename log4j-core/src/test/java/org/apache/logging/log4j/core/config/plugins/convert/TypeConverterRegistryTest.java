@@ -24,7 +24,7 @@ import static org.junit.Assert.*;
 public class TypeConverterRegistryTest {
 
     @Test(expected = NullPointerException.class)
-    public void testFindNullConverter() throws Exception {
+    public void testFindNullConverter() {
         TypeConverterRegistry.getInstance().findCompatibleConverter(null);
     }
 
@@ -63,7 +63,7 @@ public class TypeConverterRegistryTest {
         // TODO: is there a specific converter this should return?
     }
 
-    public static enum Foo {
+    public enum Foo {
         I, PITY, THE
     }
 
@@ -77,4 +77,5 @@ public class TypeConverterRegistryTest {
         assertEquals(Foo.PITY, fooTypeConverter.convert("pity"));
         assertEquals(Foo.THE, fooTypeConverter.convert("THE"));
     }
+
 }

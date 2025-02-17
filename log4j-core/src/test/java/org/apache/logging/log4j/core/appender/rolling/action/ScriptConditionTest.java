@@ -17,33 +17,36 @@
 
 package org.apache.logging.log4j.core.appender.rolling.action;
 
+import org.apache.logging.log4j.core.config.Configuration;
+import org.apache.logging.log4j.core.config.DefaultConfiguration;
+import org.apache.logging.log4j.core.script.Script;
+import org.apache.logging.log4j.core.util.Constants;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
+import org.junitpioneer.jupiter.SetSystemProperty;
+
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.List;
 
-import org.apache.logging.log4j.categories.Scripts;
-import org.apache.logging.log4j.core.config.Configuration;
-import org.apache.logging.log4j.core.config.DefaultConfiguration;
-import org.apache.logging.log4j.core.script.Script;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
-
-import static org.junit.Assert.*;
+import static org.junit.jupiter.api.Assertions.*;
 
 /**
  * Tests the ScriptCondition class.
  */
+@SetSystemProperty(key = Constants.SCRIPT_LANGUAGES, value = "js, javascript, groovy")
 public class ScriptConditionTest {
 
-    @Test(expected = NullPointerException.class)
+    @Test
     public void testConstructorDisallowsNullScript() {
-        new ScriptCondition(null, new DefaultConfiguration());
+        assertNull(ScriptCondition.createCondition(null, new DefaultConfiguration()));
     }
 
-    @Test(expected = NullPointerException.class)
+    @Test
     public void testConstructorDisallowsNullConfig() {
-        new ScriptCondition(new Script("test", "js", "print('hi')"), null);
+        assertThrows(NullPointerException.class,
+                () -> ScriptCondition.createCondition(new Script("test", "js", "print('hi')"), null));
     }
 
     @Test
@@ -51,9 +54,10 @@ public class ScriptConditionTest {
         assertNull(ScriptCondition.createCondition(null, new DefaultConfiguration()));
     }
 
-    @Test(expected = NullPointerException.class)
+    @Test
     public void testCreateConditionDisallowsNullConfig() {
-        ScriptCondition.createCondition(new Script("test", "js", "print('hi')"), null);
+        assertThrows(NullPointerException.class, () -> ScriptCondition.createCondition(
+                new Script("test", "js", "print('hi')"), null));
     }
 
     @Test
@@ -62,7 +66,7 @@ public class ScriptConditionTest {
         config.initialize(); // creates the ScriptManager
 
         final Script script = new Script("test", "javascript", "pathList;"); // script that returns pathList
-        final ScriptCondition condition = new ScriptCondition(script, config);
+        final ScriptCondition condition = ScriptCondition.createCondition(script, config);
         final List<PathWithAttributes> pathList = new ArrayList<>();
         final Path base = Paths.get("baseDirectory");
         final List<PathWithAttributes> result = condition.selectFilesToDelete(base, pathList);
@@ -82,7 +86,7 @@ public class ScriptConditionTest {
         final String scriptText = "pathList.remove(1);" //
                 + "pathList;";
         final Script script = new Script("test", "javascript", scriptText);
-        final ScriptCondition condition = new ScriptCondition(script, config);
+        final ScriptCondition condition = ScriptCondition.createCondition(script, config);
         final Path base = Paths.get("baseDirectory");
         final List<PathWithAttributes> result = condition.selectFilesToDelete(base, pathList);
         assertSame(result, pathList);
@@ -92,7 +96,7 @@ public class ScriptConditionTest {
     }
 
     @Test
-    @Category(Scripts.Groovy.class)
+    @Tag("groovy")
     public void testSelectFilesToDelete3() {
         final Configuration config = new DefaultConfiguration();
         config.initialize(); // creates the ScriptManager
@@ -123,7 +127,7 @@ public class ScriptConditionTest {
                 + "println copy;"
                 + "copy;";
         final Script script = new Script("test", "groovy", scriptText);
-        final ScriptCondition condition = new ScriptCondition(script, config);
+        final ScriptCondition condition = ScriptCondition.createCondition(script, config);
         final Path base = Paths.get("/path");
         final List<PathWithAttributes> result = condition.selectFilesToDelete(base, pathList);
         assertEquals(1, result.size());

@@ -25,7 +25,6 @@ import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
-import org.apache.kafka.clients.producer.Callback;
 import org.apache.kafka.clients.producer.Producer;
 import org.apache.kafka.clients.producer.ProducerRecord;
 import org.apache.kafka.clients.producer.RecordMetadata;
@@ -33,6 +32,7 @@ import org.apache.logging.log4j.core.LoggerContext;
 import org.apache.logging.log4j.core.appender.AbstractManager;
 import org.apache.logging.log4j.core.appender.ManagerFactory;
 import org.apache.logging.log4j.core.config.Property;
+import org.apache.logging.log4j.core.util.Integers;
 import org.apache.logging.log4j.core.util.Log4jThread;
 
 public class KafkaManager extends AbstractManager {
@@ -73,7 +73,7 @@ public class KafkaManager extends AbstractManager {
 
 		this.key = key;
 
-		this.timeoutMillis = Integer.parseInt(config.getProperty("timeout.ms", DEFAULT_TIMEOUT_MILLIS));
+		this.timeoutMillis = Integers.parseInt(config.getProperty("timeout.ms", DEFAULT_TIMEOUT_MILLIS));
 	}
 
 	@Override
@@ -90,14 +90,11 @@ public class KafkaManager extends AbstractManager {
 		if (producer != null) {
 			// This thread is a workaround for this Kafka issue:
 			// https://issues.apache.org/jira/browse/KAFKA-1660
-			final Thread closeThread = new Log4jThread(new Runnable() {
-				@Override
-				public void run() {
-					if (producer != null) {
-						producer.close();
-					}
-				}
-			}, "KafkaManager-CloseThread");
+			final Thread closeThread = new Log4jThread(() -> {
+            	if (producer != null) {
+            		producer.close();
+            	}
+            }, "KafkaManager-CloseThread");
 			closeThread.setDaemon(true); // avoid blocking JVM shutdown
 			closeThread.start();
 			try {
@@ -125,20 +122,19 @@ public class KafkaManager extends AbstractManager {
 				final Future<RecordMetadata> response = producer.send(newRecord);
 				response.get(timeoutMillis, TimeUnit.MILLISECONDS);
 			} else {
-				producer.send(newRecord, new Callback() {
-					@Override
-					public void onCompletion(final RecordMetadata metadata, final Exception e) {
-						if (e != null) {
-							LOGGER.error("Unable to write to Kafka in appender [" + getName() + "]", e);
-						}
-					}
-				});
+				producer.send(newRecord, (metadata, e) -> {
+                	if (e != null) {
+                		LOGGER.error("Unable to write to Kafka in appender [" + getName() + "]", e);
+                	}
+                });
 			}
 		}
 	}
 
 	public void startup() {
-		producer = producerFactory.newKafkaProducer(config);
+		if (producer == null) {
+			producer = producerFactory.newKafkaProducer(config);
+		}
 	}
 
 	public String getTopic() {
@@ -148,6 +144,7 @@ public class KafkaManager extends AbstractManager {
 	public static KafkaManager getManager(final LoggerContext loggerContext, final String name, final String topic,
 			final boolean syncSend, final Property[] properties, final String key) {
 		StringBuilder sb = new StringBuilder(name);
+		sb.append(" ").append(topic).append(" ").append(syncSend + "");
 		for (Property prop : properties) {
 			sb.append(" ").append(prop.getName()).append("=").append(prop.getValue());
 		}

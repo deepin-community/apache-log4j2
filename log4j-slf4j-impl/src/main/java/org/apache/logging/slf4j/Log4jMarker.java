@@ -19,20 +19,20 @@ package org.apache.logging.slf4j;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Objects;
 
 import org.apache.logging.log4j.MarkerManager;
 import org.slf4j.IMarkerFactory;
 import org.slf4j.Marker;
-import org.slf4j.impl.StaticMarkerBinder;
 
 /**
- * Log4j/SLF4J {@link org.slf4j.Marker} type bridge.
+ * Log4j/SLF4J {@link Marker} type bridge.
  */
-public class Log4jMarker implements Marker {
+class Log4jMarker implements Marker {
 
     public static final long serialVersionUID = 1590472L;
 
-    private final IMarkerFactory factory = StaticMarkerBinder.SINGLETON.getMarkerFactory();
+    private final IMarkerFactory factory;
 
     private final org.apache.logging.log4j.Marker marker;
 
@@ -40,7 +40,8 @@ public class Log4jMarker implements Marker {
      * Constructs a Log4jMarker using an existing Log4j {@link org.apache.logging.log4j.Marker}.
      * @param marker The Log4j Marker upon which to base this Marker.
      */
-    public Log4jMarker(final org.apache.logging.log4j.Marker marker) {
+    public Log4jMarker(final IMarkerFactory markerFactory, final org.apache.logging.log4j.Marker marker) {
+        this.factory = markerFactory;
         this.marker = marker;
     }
 
@@ -54,7 +55,7 @@ public class Log4jMarker implements Marker {
     }
 
     @Override
-	public boolean contains(final org.slf4j.Marker marker) {
+	public boolean contains(final Marker marker) {
 		if (marker == null) {
 			throw new IllegalArgumentException();
 		}
@@ -78,11 +79,7 @@ public class Log4jMarker implements Marker {
 			return false;
 		}
 		final Log4jMarker other = (Log4jMarker) obj;
-		if (marker == null) {
-			if (other.marker != null) {
-				return false;
-			}
-		} else if (!marker.equals(other.marker)) {
+		if (!Objects.equals(marker, other.marker)) {
 			return false;
 		}
 		return true;
@@ -104,10 +101,7 @@ public class Log4jMarker implements Marker {
 
     @Override
 	public int hashCode() {
-		final int prime = 31;
-		int result = 1;
-		result = prime * result + ((marker == null) ? 0 : marker.hashCode());
-		return result;
+		return 31 + Objects.hashCode(marker);
 	}
 
     @Override
