@@ -1,0 +1,130 @@
+Index: github-apache-log4j2-CVE-2025-68161/log4j-core/src/main/java/org/apache/logging/log4j/core/net/SslSocketManager.java
+===================================================================
+--- github-apache-log4j2-CVE-2025-68161.orig/log4j-core/src/main/java/org/apache/logging/log4j/core/net/SslSocketManager.java
++++ github-apache-log4j2-CVE-2025-68161/log4j-core/src/main/java/org/apache/logging/log4j/core/net/SslSocketManager.java
+@@ -22,8 +22,11 @@ import java.io.Serializable;
+ import java.net.InetAddress;
+ import java.net.InetSocketAddress;
+ import java.net.Socket;
++import java.util.Collections;
+ import java.util.List;
+ 
++import javax.net.ssl.SNIHostName;
++import javax.net.ssl.SSLParameters;
+ import javax.net.ssl.SSLSocket;
+ import javax.net.ssl.SSLSocketFactory;
+ 
+@@ -137,9 +140,75 @@ public class SslSocketManager extends Tc
+     @Override
+     protected Socket createSocket(final InetSocketAddress socketAddress) throws IOException {
+         final SSLSocketFactory socketFactory = createSslSocketFactory(sslConfig);
+-        final Socket newSocket = socketFactory.createSocket();
+-        newSocket.connect(socketAddress, getConnectTimeoutMillis());
+-        return newSocket;
++        final SSLSocket socket = (SSLSocket) socketFactory.createSocket();
++        socket.connect(socketAddress, getConnectTimeoutMillis());
++        
++        // CVE-2025-68161: Perform hostname verification if enabled
++        if (sslConfig != null && sslConfig.isVerifyHostName()) {
++            verifyHostname(socket, getHost());
++        }
++        
++        return socket;
++    }
++    
++    /**
++     * Verifies the hostname in the SSL/TLS certificate.
++     * This addresses CVE-2025-68161 by ensuring proper hostname verification.
++     *
++     * @param socket the SSL socket
++     * @param hostName the expected hostname
++     * @throws IOException if hostname verification fails
++     */
++    private void verifyHostname(final SSLSocket socket, final String hostName) throws IOException {
++        final SSLParameters sslParameters = socket.getSSLParameters();
++        sslParameters.setEndpointIdentificationAlgorithm("HTTPS");
++        
++        // Set SNI hostname for proper certificate validation
++        // Skip SNI for IP addresses (IPv4 or IPv6)
++        if (!isIPAddress(hostName)) {
++            try {
++                sslParameters.setServerNames(Collections.singletonList(new SNIHostName(hostName)));
++            } catch (IllegalArgumentException ignored) {
++                // Invalid hostname, skip SNI but still verify
++            }
++        }
++        
++        socket.setSSLParameters(sslParameters);
++        socket.startHandshake();
++    }
++    
++    /**
++     * Checks if the given string is an IP address (IPv4 or IPv6).
++     *
++     * @param host the hostname to check
++     * @return true if it's an IP address
++     */
++    private static boolean isIPAddress(final String host) {
++        if (host == null || host.isEmpty()) {
++            return false;
++        }
++        
++        // Check for IPv6 (contains colon)
++        if (host.contains(":")) {
++            return true;
++        }
++        
++        // Check for IPv4 (dotted decimal)
++        String[] parts = host.split("\\.");
++        if (parts.length != 4) {
++            return false;
++        }
++        for (String part : parts) {
++            try {
++                int num = Integer.parseInt(part);
++                if (num < 0 || num > 255) {
++                    return false;
++                }
++            } catch (NumberFormatException e) {
++                return false;
++            }
++        }
++        return true;
+     }
+ 
+     private static SSLSocketFactory createSslSocketFactory(final SslConfiguration sslConf) {
+@@ -186,14 +255,30 @@ public class SslSocketManager extends Tc
+         final SSLSocketFactory socketFactory = createSslSocketFactory(sslConfiguration);
+         final SSLSocket socket = (SSLSocket) socketFactory.createSocket();
+         if (socketOptions != null) {
+-            // Not sure which options must be applied before or after the connect() call.
+             socketOptions.apply(socket);
+         }
+         socket.connect(socketAddress, connectTimeoutMillis);
+-        if (socketOptions != null) {
+-            // Not sure which options must be applied before or after the connect() call.
+-            socketOptions.apply(socket);
++        
++        // CVE-2025-68161: Perform hostname verification if enabled
++        if (sslConfiguration != null && sslConfiguration.isVerifyHostName()) {
++            final SSLParameters sslParameters = socket.getSSLParameters();
++            sslParameters.setEndpointIdentificationAlgorithm("HTTPS");
++            
++            // Set SNI hostname for proper certificate validation
++            // Note: We don't have the hostname here, so we extract it from socketAddress
++            final String hostName = socketAddress.getHostString();
++            if (!isIPAddress(hostName)) {
++                try {
++                    sslParameters.setServerNames(Collections.singletonList(new SNIHostName(hostName)));
++                } catch (IllegalArgumentException ignored) {
++                    // Invalid hostname, skip SNI but still verify
++                }
++            }
++            
++            socket.setSSLParameters(sslParameters);
++            socket.startHandshake();
+         }
++        
+         return socket;
+     }
+ }
