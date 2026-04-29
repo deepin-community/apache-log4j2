@@ -1,2 +1,3 @@
 01-disable-kafka-appender.patch
 03-mongodb-compatibility.patch
+cve_2025_68161.patch

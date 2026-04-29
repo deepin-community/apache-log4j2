@@ -1,3 +1,12 @@
+apache-log4j2 (2.13.3-1deepin1) unstable; urgency=medium
+
+  * Fix CVE-2025-68161: TLS hostname verification bypass in Socket Appender
+    - Added hostname verification when verifyHostName is enabled
+    - Properly validates SSL/TLS certificate hostname
+    - Addresses man-in-the-middle attack vulnerability (CVSS 6.3)
+
+ -- hudeng <hudeng@deepin.org>  Tue, 29 Apr 2026 14:35:00 +0800
+
 apache-log4j2 (2.13.3-1) unstable; urgency=medium
 
   * New upstream release
